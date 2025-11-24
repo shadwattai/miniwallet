@@ -10,6 +10,16 @@ import { initializeTheme } from './composables/useAppearance';
 import Aura from '@primeuix/themes/aura'; 
 import ConfirmationService from 'primevue/confirmationservice';
 import Tooltip from 'primevue/tooltip';
+import { configureEcho } from '@laravel/echo-vue';
+import { configureEcho } from '@laravel/echo-vue';
+
+configureEcho({
+    broadcaster: 'pusher',
+});
+
+configureEcho({
+    broadcaster: 'reverb',
+});
   
 import ToastService from 'primevue/toastservice' 
 

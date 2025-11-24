@@ -9,46 +9,17 @@ use Symfony\Component\HttpKernel\Exception\InvalidArgumentException;
 
 class UpdateController extends Controller
 {
-    public $bns_key;
-    public $acc_key;
-    public $app_key;
     public $actorKey;
 
     public function __construct()
     {
         try {
-            $constants = (new ConstantsController())->getAppConstants();
-
-            $this->acc_key = $constants['acc_key'] ?? null;
-            $this->bns_key = $constants['bns_key'] ?? null;
-            $this->app_key = $constants['app_key'] ?? null;
-
-            if (!$this->acc_key) {
-                Log::warning('Account key not found in session', [
-                    'user_id' => Auth::id(),
-                    'request_url' => request()->url()
-                ]);
-                throw new \InvalidArgumentException('Account not found in session');
-            }
-
-            if (!$this->bns_key) {
-                Log::warning('Business key not found in session', [
-                    'user_id' => Auth::id(),
-                    'request_url' => request()->url()
-                ]);
-                throw new \InvalidArgumentException('Business not found in session');
-            }
-
             $user = Auth::user();
             if (!$user) {
                 throw new \Exception('User not authenticated');
             }
 
-            $this->actorKey = $user->key ?? Cache::remember('root_user_key', 3600, function () {
-                return DB::table('users')
-                    ->where('is_root', 'yes')
-                    ->where('status', 'active')->value('key');
-            });
+            $this->actorKey = $user->key ?? $user->id;
 
             if (!$this->actorKey) {
                 throw new \Exception('No valid actor key found');
@@ -56,7 +27,7 @@ class UpdateController extends Controller
         } catch (\Exception $e) {
             Log::error('UpdateController initialization failed', [
                 'error' => $e->getMessage(),
-                'user_key' => Auth::user()->key ?? null,
+                'user_id' => Auth::id(),
                 'trace' => $e->getTraceAsString()
             ]);
             throw $e;
@@ -76,8 +47,12 @@ class UpdateController extends Controller
             throw new \Exception('User not authenticated');
         }
 
-        return (new ConstantsController())
-            ->checkModulePermission($user, $this->app_key, $this->bns_key, $action = 'update');
+        // For single tenant, simply check if user is authenticated and active
+        if (!$user->status || $user->status !== 'active') {
+            throw new \Exception('User account is not active');
+        }
+
+        return true;
     }
 
     public function validateTableAccess(string $table): void
@@ -280,8 +255,6 @@ class UpdateController extends Controller
             foreach ($indexGroups as $keyName => $fields) {
                 $fieldsToCheck = [];
                 $whereConditions = [
-                    ['bns_key', '=', $this->bns_key],
-                    ['acc_key', '=', $this->acc_key],
                     ['key', '!=', $currentKey]
                 ];
 
@@ -355,26 +328,18 @@ class UpdateController extends Controller
     */
 
     /**
-     * Build secure query with multi-tenant filters
+     * Build secure query for single tenant
      */
     private function buildSecureQuery(string $table, string $key = null)
     {
-        $columns = Schema::getColumnListing($table);
         $query = DB::table($table);
-
-        // Only add multi-tenant filters if columns exist
-        if (in_array('bns_key', $columns)) {
-            $query->where('bns_key', $this->bns_key);
-        }
-
-        if (in_array('acc_key', $columns)) {
-            $query->where('acc_key', $this->acc_key);
-        }
 
         // Add key filter if provided
         if ($key !== null) {
             $query->where('key', $key);
         }
+
+        // For single tenant, no additional filtering needed
 
         return $query;
     }
@@ -700,7 +665,7 @@ class UpdateController extends Controller
     {
         return DB::transaction(function () use ($table, $key, $field) {
             $this->checkUpdatePermission();
-            (new ConstantsController())->ValidateTableAccess($table, 'update');
+            $this->validateTableAccess($table);
 
             $existingRow = $this->buildSecureQuery($table, $key)->first();
             if (!$existingRow) {

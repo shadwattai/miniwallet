@@ -1,8 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Artifacts;
-
-use Illuminate\Support\Str;
+ 
 use Illuminate\Support\Facades\{DB, Schema, Log, Auth, Cache};
 use App\Http\Controllers\Controller;
 
@@ -79,7 +78,7 @@ class DeleteController extends Controller
             throw new \InvalidArgumentException("Table '{$table}' does not exist");
         }
 
-        $restrictedTables = ['migrations','cache', 'sessions', 'users', 'auth_user_audit_trails'];
+        $restrictedTables = ['migrations','cache', 'sessions', 'users', 'users_audit_trails'];
 
         if (in_array($table, $restrictedTables)) {
             throw new \Exception("Access denied to table '{$table}'");

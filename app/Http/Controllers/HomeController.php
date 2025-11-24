@@ -23,7 +23,7 @@ class HomeController extends Controller
              
         }
 
-        return Inertia::render('personal/Home', [
+        return Inertia::render('Home', [
             'User' => $user,
         ]);
     }

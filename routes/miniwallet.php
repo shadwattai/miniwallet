@@ -1,13 +1,12 @@
 <?php
 
 use Inertia\Inertia;
-use Illuminate\Support\Facades\{Route, DB};
-
-use App\Http\Controllers\HomeController;
+use Illuminate\Support\Facades\{Route, DB}; 
 use App\Http\Middleware\UserActiveMiddleware;
 
 use App\Http\Controllers\WalletsController;
-
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TransactionsController;
 
 Route::middleware(
     [
@@ -22,11 +21,11 @@ Route::middleware(
     ])->name('wallets');
     
     Route::get('/transactions', [
-        WalletsController::class, 'getTransactions'
+        TransactionsController::class, 'getTransactions'
     ])->name('transactions');
 
     Route::get('/settings', [
-        WalletsController::class, 'getSettings'
+        SettingsController::class, 'getSettings'
     ])->name('settings');
 
 });

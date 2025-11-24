@@ -6,15 +6,17 @@ use Inertia\Inertia;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\{Log, Auth, Hash, DB};
 
-class WalletsController extends Controller
+class TransactionsController extends Controller
 {
-    public function getWallets()
+    public function getTransactions()
     {
-        $wallets = [];
+        $transactions = [];
 
-        return Inertia::render('wallets/List', [
+
+
+        return Inertia::render('transactions/List', [
             'User' => Auth::user(),
-            'wallets' => $wallets,
+            'transactions' => $transactions,
         ]);
     }
 

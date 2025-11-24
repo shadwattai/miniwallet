@@ -7,7 +7,7 @@ import { User as UserIcon } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Wallets',
         href: dashboard().url,
     },
 ];

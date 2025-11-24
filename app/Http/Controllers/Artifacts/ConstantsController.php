@@ -18,7 +18,7 @@ class ConstantsController extends Controller
             throw new UnauthorizedHttpException('You must be logged in to access this resource.');
         }
 
-            
+        
     }
  
 }

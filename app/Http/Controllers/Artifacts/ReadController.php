@@ -1,54 +1,23 @@
 <?php
 
 namespace App\Http\Controllers\Artifacts;
-
-use Illuminate\Support\Str;
+ 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\{DB, Schema, Log, Auth, Cache};
 
 class ReadController extends Controller
 {
-    public $bns_key;
-    public $acc_key;
-    public $app_key;
     public $actorKey;
 
     public function __construct()
     {
         try {
-            $constants = (new ConstantsController())->getAppConstants();
-
-            $this->acc_key = $constants['acc_key'] ?? null;
-            $this->bns_key = $constants['bns_key'] ?? null;
-            $this->app_key = $constants['app_key'] ?? null;
-
-            if (!$this->acc_key) {
-                Log::warning('Account key not found in session', [
-                    'user_id' => Auth::id(),
-                    'request_url' => request()->url()
-                ]);
-                throw new \InvalidArgumentException('Account not found in session');
-            }
-
-            if (!$this->bns_key) {
-                Log::warning('Business key not found in session', [
-                    'user_id' => Auth::id(),
-                    'request_url' => request()->url()
-                ]);
-                throw new \InvalidArgumentException('Business not found in session');
-            }
-
             $user = Auth::user();
             if (!$user) {
                 throw new \Exception('User not authenticated');
             }
 
-            $this->actorKey = $user->key ?? Cache::remember('root_user_key', 3600, function () {
-                return DB::table('users')
-                    ->where('is_root', 'yes')
-                    ->where('status', 'active')
-                    ->value('key');
-            });
+            $this->actorKey = $user->key ?? $user->id;
 
             if (!$this->actorKey) {
                 throw new \Exception('No valid actor key found');
@@ -56,7 +25,7 @@ class ReadController extends Controller
         } catch (\Exception $e) {
             Log::error('ReadController initialization failed', [
                 'error' => $e->getMessage(),
-                'user_key' => Auth::user()->key ?? null,
+                'user_id' => Auth::id(),
                 'trace' => $e->getTraceAsString()
             ]);
             throw $e;
@@ -74,28 +43,22 @@ class ReadController extends Controller
             throw new \Exception('User not authenticated');
         }
 
-        return (new ConstantsController())
-            ->checkModulePermission($user, $this->app_key, $this->bns_key, $action = 'read');
+        // For single tenant, simply check if user is authenticated and active
+        if (!$user->status || $user->status !== 'active') {
+            throw new \Exception('User account is not active');
+        }
+
+        return true;
     }
 
-
-
     /**
-     * Build secure query with multi-tenant filters only if columns exist
+     * Build secure query for single tenant
      */
     private function buildSecureQuery(string $table)
     {
-        $columns = Schema::getColumnListing($table);
         $query = DB::table($table);
 
-        // Only add multi-tenant filters if columns exist
-        if (in_array('bns_key', $columns)) {
-            $query->where('bns_key', $this->bns_key);
-        }
-
-        if (in_array('acc_key', $columns)) {
-            $query->where('acc_key', $this->acc_key);
-        }
+        // For single tenant, no additional filtering needed
 
         return $query;
     }
@@ -114,15 +77,12 @@ class ReadController extends Controller
         return $query;
     }
 
-
-
     /**
      * Check if a record exists
      */
     public function RecordExists(string $table, string $key): bool
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table)->where('key', $key);
         $query = $this->useSoftRemovalFilter($query, $table);
@@ -136,7 +96,6 @@ class ReadController extends Controller
     public function GetSingleRow(string $table, $keyOrFilters, $value = null): ?object
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table);
 
@@ -180,7 +139,6 @@ class ReadController extends Controller
     public function GetPaginatedRows(string $table, array $filters = [], int $perPage = 15): \Illuminate\Pagination\LengthAwarePaginator
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table);
 
@@ -221,7 +179,6 @@ class ReadController extends Controller
     public function SearchRows(string $table, array $searchCriteria, int $limit = 100): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table);
 
@@ -260,7 +217,6 @@ class ReadController extends Controller
     public function GetTableStats(string $table): array
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $columns = Schema::getColumnListing($table);
         $baseQuery = $this->buildSecureQuery($table);
@@ -310,7 +266,6 @@ class ReadController extends Controller
     public function CountRows(string $table, array $conditions = []): int
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table);
 
@@ -341,7 +296,6 @@ class ReadController extends Controller
     public function GetAllRows(string $table, int $limit = 1000): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         // Safety check for large datasets
         $totalCount = $this->CountRows($table);
@@ -375,7 +329,6 @@ class ReadController extends Controller
     public function GetRowsInChunks(string $table, int $chunkSize = 100, ?callable $callback = null): int
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table);
         $query = $this->useSoftRemovalFilter($query, $table);
@@ -407,7 +360,6 @@ class ReadController extends Controller
     public function GetAllRowsPaginated(string $table, int $perPage = 100): array
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $totalCount = $this->CountRows($table);
         $allRecords = collect();
@@ -453,7 +405,6 @@ class ReadController extends Controller
     public function StreamRows(string $table, callable $callback, int $chunkSize = 1000): int
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         if (!is_callable($callback)) {
             throw new \InvalidArgumentException('Callback must be callable');
@@ -489,7 +440,6 @@ class ReadController extends Controller
     public function GetRowsByField(string $table, string $field, $value): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $query = $this->buildSecureQuery($table)->where($field, $value);
 
@@ -515,7 +465,6 @@ class ReadController extends Controller
     public function GetSoftDeletedRows(string $table, int $limit = 100): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $columns = Schema::getColumnListing($table);
         if (!in_array('deleted_at', $columns)) {
@@ -542,7 +491,6 @@ class ReadController extends Controller
     public function AdvancedSearch(string $table, array $conditions, array $options = []): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         $limit = $options['limit'] ?? 100;
         $orderBy = $options['order_by'] ?? 'id';
@@ -595,7 +543,6 @@ class ReadController extends Controller
     public function GetRowsWhereIn(string $table, string $field, array $values, int $limit = 1000): \Illuminate\Support\Collection
     {
         $this->checkReadPermission();
-        (new ConstantsController())->ValidateTableAccess($table, 'read');
 
         if (empty($values)) {
             return collect();
