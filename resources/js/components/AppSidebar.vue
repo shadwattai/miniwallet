@@ -9,7 +9,6 @@ import { Wallet, ListCheck, Settings, Home, FolderKanban, UserPen, FolderTree, U
 import AppLogo from './AppLogo.vue';
 
 import { dashboard } from '@/routes';
-import Divider from 'primevue/divider';
 
 
 const props = defineProps<{
@@ -68,30 +67,10 @@ const adminCombinedNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <!-- User Info Section -->
-
-            <Divider  />
-            <div v-if="props.User" class="px-3 py-2 mb-4 bg-muted/50 rounded-lg mx-2">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                        <UsersIcon class="w-4 h-4" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium truncate">
-                            {{ props.User.name || props.User.username || 'User' }}
-                        </p>
-                        <p class="text-xs text-muted-foreground truncate">
-                            {{ props.User.email || props.User.role || '' }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Navigation based on user role -->
+             
             <NavMain v-if="props.User?.role === 'user'" :items="userNavItems" />
             <NavMain v-if="props.User?.role === 'admin'" :items="adminCombinedNavItems" />
             
-             
         </SidebarContent>
 
         <SidebarFooter> 

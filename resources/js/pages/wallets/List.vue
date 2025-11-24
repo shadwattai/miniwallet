@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { User as UserIcon } from 'lucide-vue-next';
+import { Wallet2 as WalletIcon } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
