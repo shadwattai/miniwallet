@@ -24,7 +24,16 @@ return new class extends Migration
             $table->decimal('amount_dr', 26, 2)->default(0);
             $table->decimal('amount_cr', 26, 2)->default(0);
             
-            $table->timestamps();
+
+            // Audit fields with proper constraints
+            $table->integer('version')->default(1);
+            $table->uuid('created_by');
+            $table->timestampTz('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+            $table->uuid('updated_by')->nullable();
+            $table->timestampTz('updated_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+            $table->uuid('deleted_by')->nullable();
+            $table->timestampTz('deleted_at')->nullable();
+            
             
             $table->foreign('trxn_key')->references('key')->on('wlt_transactions')->onDelete('cascade');
             $table->foreign('acct_key')->references('key')->on('wlt_accounts')->onDelete('restrict');

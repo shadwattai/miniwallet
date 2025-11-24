@@ -21,9 +21,10 @@ class DatabaseSeeder extends Seeder
         DB::table('users')->truncate(); 
 
         $masterpass = '$2y$12$LqW3PUWK8Z4We8MXTYnsJ.9sDN.GWfyWYRC9WAe4e5rhhNlP5UTwq';
+        $systemRootKey = 'fadf94db-6d13-4328-a7ab-92ee2a1b5090';
 
         User::factory()->create([
-            'key' => 'fadf94db-6d13-4328-a7ab-92ee2a1b5090',
+            'key' => $systemRootKey,
             'name' => 'System Root',
             'handle' => '@system.root',
             'password' => $masterpass,
@@ -31,6 +32,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'root@miniwallet.com',
             'phone' => '+255 786 555 665',
             'role' => 'admin',
+            'created_by' => $systemRootKey, // Self-created
         ]);
 
         User::factory()->create([
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'lisa@miniwallet.com',
             'phone' => '+255 752 555 665',
             'role' => 'admin',
+            'created_by' => $systemRootKey,
         ]); 
         
         User::factory()->create([
@@ -52,6 +55,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'email' => 'ada@miniwallet.com',
             'role' => 'user',
+            'created_by' => $systemRootKey,
         ]);
 
         User::factory()->create([
@@ -61,6 +65,7 @@ class DatabaseSeeder extends Seeder
             'password' => $masterpass,
             'email_verified_at' => now(),
             'email' => 'linda@miniwallet.com',
+            'created_by' => $systemRootKey,
         ]);
 
         User::factory()->create([
@@ -70,6 +75,7 @@ class DatabaseSeeder extends Seeder
             'password' => $masterpass,
             'email_verified_at' => now(),
             'email' => 'regina@miniwallet.com',
+            'created_by' => $systemRootKey,
         ]);
 
         User::factory()->create([
@@ -79,6 +85,7 @@ class DatabaseSeeder extends Seeder
             'password' => $masterpass,
             'email_verified_at' => now(),
             'email' => 'abbie.april@miniwallet.com',
+            'created_by' => $systemRootKey,
         ]);
         User::factory()->create([
             'key' => Str::uuid(),
@@ -87,6 +94,7 @@ class DatabaseSeeder extends Seeder
             'password' => $masterpass,
             'email_verified_at' => now(),
             'email' => 'kemi@miniwallet.com',
+            'created_by' => $systemRootKey,
         ]);
 
         User::factory()->create([
@@ -96,9 +104,22 @@ class DatabaseSeeder extends Seeder
             'password' => $masterpass,
             'email_verified_at' => now(),
             'email' => 'olivia@miniwallet.com',
+            'created_by' => $systemRootKey,
         ]);
 
-        User::factory(294)->create(); 
+        User::factory()->create([
+            'key' => Str::uuid(),
+            'name' => 'Juddie Wattai',
+            'handle' => '@juddie.wattai',
+            'password' => $masterpass,
+            'email_verified_at' => now(),
+            'email' => 'juddie@miniwallet.com',
+            'created_by' => $systemRootKey,
+        ]);
+
+        User::factory(294)->create([
+            'created_by' => $systemRootKey,
+        ]); 
 
     }
 }

@@ -51,9 +51,15 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();
 
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
-            $table->timestamps();
+            // Audit fields with proper constraints
+            $table->integer('version')->default(1);
+            $table->uuid('created_by');
+            $table->timestampTz('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+            $table->uuid('updated_by')->nullable();
+            $table->timestampTz('updated_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+            $table->uuid('deleted_by')->nullable();
+            $table->timestampTz('deleted_at')->nullable();
+           
         });
 
         // Create index, trigger, and reset sequence for users table
