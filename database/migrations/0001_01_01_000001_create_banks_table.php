@@ -18,7 +18,7 @@ return new class extends Migration
 
             $table->string('bank_name');
             $table->string('bank_code', 10)->unique();
-            $table->string('bank_logo', 10)->nullable();
+            $table->string('bank_logo', 255)->nullable();
             $table->string('swift_code', 11)->nullable();
             $table->string('country_code', 3)->default('UAE');
             $table->string('bank_type', 20)->default('commercial'); // commercial, islamic, central, investment

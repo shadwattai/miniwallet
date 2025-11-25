@@ -299,6 +299,7 @@ class ReadController extends Controller
 
         // Safety check for large datasets
         $totalCount = $this->CountRows($table);
+        
         if ($totalCount > $limit) {
             Log::warning("GetAllRows called on large dataset", [
                 'table' => $table,

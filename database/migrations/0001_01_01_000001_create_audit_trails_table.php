@@ -13,8 +13,8 @@ return new class extends Migration
     public function up(): void
     {
         // Create audit_action enum type first
-        DB::statement("CREATE TYPE audit_action AS ENUM ('create', 'read', 'update', 'delete', 'login', 'logout', 'approve', 'reject', 'export')");
-
+        DB::statement("CREATE TYPE audit_action AS ENUM ('create', 'read', 'update', 'delete', 'prepare', 'review', 'approve', 'decline', 'search', 'print', 'login', 'logout')");
+ 
         Schema::create('users_audit_trails', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->uuid('key')->default(DB::raw('uuid_generate_v4()'))->primary();
@@ -51,10 +51,9 @@ return new class extends Migration
         DB::statement('ALTER TABLE users_audit_trails ADD CONSTRAINT chk_users_audit_trails_updated_at CHECK (updated_at >= created_at)');
 
         // Indexes for performance
-        DB::statement('CREATE INDEX "idx_users_audit_trails" ON users_audit_trails USING BTREE(acc_key, bns_key, usr_key, app_key)');
         DB::statement('CREATE INDEX "idx_users_audit_trails_action" ON users_audit_trails USING BTREE(action, action_time DESC)');
         DB::statement('CREATE INDEX "idx_users_audit_trails_table" ON users_audit_trails USING BTREE(table_name, action_time DESC)');
-        DB::statement('CREATE INDEX "idx_users_audit_trails_user" ON users_audit_trails USING BTREE(usr_key, action_time DESC)');
+        DB::statement('CREATE INDEX "idx_users_audit_trails_user" ON users_audit_trails USING BTREE(action_time DESC)');
         
         // Trigger
         DB::statement('CREATE TRIGGER set_timestamp BEFORE UPDATE ON users_audit_trails FOR EACH ROW EXECUTE PROCEDURE trigger_update_timestamp()');

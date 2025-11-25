@@ -117,7 +117,7 @@ class DeleteController extends Controller
 
                 if ($updated) {
                     (new CreateController())->RecordAuditTrail(
-                        'remove', 
+                        'delete', 
                         "Soft deleted record from {$table}",
                         $table,
                         (array)$existingRow,
@@ -236,7 +236,7 @@ class DeleteController extends Controller
 
             if ($purged > 0) {
                 (new CreateController())->RecordAuditTrail(
-                    'purge',
+                    'delete',
                     "Purged {$purged} soft deleted records from {$table}",
                     $table,
                     $softDeletedRows->toArray(),
@@ -292,7 +292,7 @@ class DeleteController extends Controller
                 $deleteType = in_array('deleted_at', $columns) ? 'soft deleted' : 'hard deleted';
                 
                 (new CreateController())->RecordAuditTrail(
-                    'remove',
+                    'delete',
                     "Bulk {$deleteType} {$deleted} records from {$table} where {$field} = {$value}",
                     $table,
                     $recordsToDelete->toArray(),
@@ -383,7 +383,7 @@ class DeleteController extends Controller
 
             if ($updated) {
                 (new CreateController())->RecordAuditTrail(
-                    'edit',
+                    'update',
                     "Restored record in {$table}",
                     $table,
                     (array)$existingRow,

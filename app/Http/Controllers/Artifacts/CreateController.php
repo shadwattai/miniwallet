@@ -148,12 +148,17 @@ class CreateController extends Controller
                     'description' => $description,
                     'table' => $tableName
                 ]);
-                throw new \Exception("Invalid action type for audit trail: {$action}");
+                return false;
+            }
+
+            // Check if audit table exists
+            if (!Schema::hasTable('users_audit_trails')) {
+                Log::error('Audit trail table does not exist: users_audit_trails');
+                return false;
             }
 
             $auditData = [
                 'key' => Str::uuid()->toString(),
-                'usr_key' => $this->actorKey,
                 'action' => $action,
                 'description' => $description,
                 'table_name' => $tableName,
@@ -164,16 +169,38 @@ class CreateController extends Controller
                 'user_os' => $request->header('User-Agent'),
                 'user_browser' => $request->header('Sec-Ch-Ua'),
                 'user_device' => $request->header('Sec-Ch-Ua-Platform'),
+                'version' => 1,
                 'created_by' => $this->actorKey,
+                'updated_by' => $this->actorKey,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
 
-            return DB::table('auth_user_audit_trails')->insert($auditData);
+            Log::info('Attempting to record audit trail', [
+                'action' => $action,
+                'table' => $tableName,
+                'audit_data_keys' => array_keys($auditData)
+            ]);
+
+            $result = DB::table('users_audit_trails')->insert($auditData);
+            
+            if ($result) {
+                Log::info('Audit trail recorded successfully', [
+                    'action' => $action,
+                    'table' => $tableName
+                ]);
+            } else {
+                Log::error('Failed to insert audit trail record');
+            }
+
+            return $result;
         } catch (\Exception $e) {
             Log::error("Error recording audit trail: " . $e->getMessage(), [
                 'action' => $action,
-                'description' => $description
+                'description' => $description,
+                'table' => $tableName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             return false;
         }
@@ -222,11 +249,11 @@ class CreateController extends Controller
 
                 Log::info("Record inserted in {$table}", ['key' => $key]);
 
-                $action = 'add';
-                $prevData = (array)$existingRow;
+                $action = 'create';
+                $prevData = null; // For new records, there's no previous data
                 $description = "Created new record in {$table}";
 
-                $this->RecordAuditTrail($action, $description, $table, $prevData, $data);
+                $this->RecordAuditTrail($action, $description, $table, $prevData, $cleanData);
 
                 return $key;
             } catch (\Exception $e) {

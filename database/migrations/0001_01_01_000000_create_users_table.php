@@ -38,7 +38,7 @@ return new class extends Migration
 
         Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->uuid('key')->default(DB::raw('uuid_generate_v4()'))->primary();
+            $table->uuid('key')->default(DB::raw('uuid_generate_v4()'))->unique();
 
             $table->string('name')->notNullable();
             $table->string('handle')->unique();
@@ -50,6 +50,7 @@ return new class extends Migration
             $table->string('password'); 
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('status')->default('active'); // active or inactive
 
             // Audit fields with proper constraints
             $table->integer('version')->default(1);
@@ -76,7 +77,7 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            $table->uuid('user_id')->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');
