@@ -17,6 +17,7 @@ import Badge from 'primevue/badge';
 import Dialog from 'primevue/dialog';
 import ScrollPanel from 'primevue/scrollpanel';
 import Toast from 'primevue/toast';
+import Fieldset from 'primevue/fieldset';
 import { useToast } from 'primevue/usetoast';
 
 interface AuditTrail {
@@ -184,36 +185,6 @@ const clearFilters = () => {
     loadAuditTrails();
 };
 
-// Export functionality
-const exportAuditTrails = async () => {
-    try {
-        const params = new URLSearchParams();
-        if (debouncedSearch.value) params.append('search', debouncedSearch.value);
-        if (actionType.value) params.append('action', actionType.value);
-        if (dateFrom.value) params.append('date_from', dateFrom.value);
-        if (dateTo.value) params.append('date_to', dateTo.value);
-
-        const response = await fetch(`/miniwallet/settings/audit/export?${params.toString()}`, {
-            method: 'POST'
-        });
-        
-        if (response.ok) {
-            // Handle file download
-            toast.add({
-                severity: 'info',
-                summary: 'Export',
-                detail: 'Export functionality will be implemented'
-            });
-        }
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to export audit trails'
-        });
-    }
-};
-
 // Load data on mount
 onMounted(() => {
     loadAuditTrails();
@@ -286,15 +257,6 @@ onMounted(() => {
                         size="small"
                     />
                 </div>
-            </template>
-            <template #end>
-                <Button 
-                    label="EXPORT" 
-                    icon="pi pi-download" 
-                    severity="secondary" 
-                    outlined 
-                    @click="exportAuditTrails"
-                />
             </template>
         </Toolbar>
 
@@ -406,67 +368,74 @@ onMounted(() => {
             header="Audit Trail Details" 
             class="w-[800px]"
         >
-            <div v-if="selectedAuditTrail" class="space-y-4">
-                <!-- Basic Info -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Action</label>
-                        <Tag 
-                            :value="selectedAuditTrail.action.toUpperCase()" 
-                            :severity="getActionSeverity(selectedAuditTrail.action)"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Time</label>
-                        <span class="text-sm">{{ formatDate(selectedAuditTrail.action_time) }}</span>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Table</label>
-                        <Badge :value="selectedAuditTrail.table_name || 'system'" severity="info" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">IP Address</label>
-                        <span class="text-sm font-mono">{{ selectedAuditTrail.user_ip || 'Unknown' }}</span>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div>
-                    <label class="block text-sm font-medium mb-1">Description</label>
-                    <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description' }}</p>
-                </div>
-
-                <!-- User Details -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">User</label>
-                        <div class="text-sm">
-                            <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}</div>
-                            <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by || 'System' }}</div>
+            <Fieldset legend="Audit Record Information" v-if="selectedAuditTrail">
+                <div class="space-y-4">
+                    <!-- Basic Info -->
+                    <Fieldset legend="Basic Information" class="mb-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Action</label>
+                                <Tag 
+                                    :value="selectedAuditTrail.action.toUpperCase()" 
+                                    :severity="getActionSeverity(selectedAuditTrail.action)"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Time</label>
+                                <span class="text-sm">{{ formatDate(selectedAuditTrail.action_time) }}</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Table</label>
+                                <Badge :value="selectedAuditTrail.table_name || 'system'" severity="info" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">IP Address</label>
+                                <span class="text-sm font-mono">{{ selectedAuditTrail.user_ip || 'Unknown' }}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">User Agent</label>
-                        <span class="text-xs">{{ selectedAuditTrail.user_os || 'Unknown' }}</span>
-                    </div>
-                </div>
+                    </Fieldset>
 
-                <!-- Data Changes -->
-                <div v-if="selectedAuditTrail.prev_data || selectedAuditTrail.new_data" class="grid grid-cols-2 gap-4">
-                    <div v-if="selectedAuditTrail.prev_data">
-                        <label class="block text-sm font-medium mb-1">Previous Data</label>
-                        <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
-                            <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.prev_data, null, 2) }}</pre>
-                        </ScrollPanel>
-                    </div>
-                    <div v-if="selectedAuditTrail.new_data">
-                        <label class="block text-sm font-medium mb-1">New Data</label>
-                        <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
-                            <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.new_data, null, 2) }}</pre>
-                        </ScrollPanel>
-                    </div>
+                    <!-- Description -->
+                    <Fieldset legend="Description" class="mb-4">
+                        <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description' }}</p>
+                    </Fieldset>
+
+                    <!-- User Details -->
+                    <Fieldset legend="User Information" class="mb-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">User</label>
+                                <div class="text-sm">
+                                    <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}</div>
+                                    <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by || 'System' }}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">User Agent</label>
+                                <span class="text-xs">{{ selectedAuditTrail.user_os || 'Unknown' }}</span>
+                            </div>
+                        </div>
+                    </Fieldset>
+
+                    <!-- Data Changes -->
+                    <Fieldset legend="Data Changes" v-if="selectedAuditTrail.prev_data || selectedAuditTrail.new_data">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div v-if="selectedAuditTrail.prev_data">
+                                <label class="block text-sm font-medium mb-1">Previous Data</label>
+                                <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
+                                    <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.prev_data, null, 2) }}</pre>
+                                </ScrollPanel>
+                            </div>
+                            <div v-if="selectedAuditTrail.new_data">
+                                <label class="block text-sm font-medium mb-1">New Data</label>
+                                <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
+                                    <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.new_data, null, 2) }}</pre>
+                                </ScrollPanel>
+                            </div>
+                        </div>
+                    </Fieldset>
                 </div>
-            </div>
+            </Fieldset>
         </Dialog>
     </div>
 </template>

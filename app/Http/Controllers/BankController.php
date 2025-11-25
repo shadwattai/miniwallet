@@ -17,13 +17,13 @@ class BankController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function getBanks()
     {
         try {
             $readController = new ReadController();
             $banks = $readController->GetAllRows('wlt_banks', 1000);
-            
-            return response()->json($banks);
+
+            return  $banks;
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to retrieve banks: ' . $e->getMessage()
