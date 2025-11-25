@@ -22,7 +22,7 @@ Route::middleware(
 // Bank management routes
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('banks', BankController::class);
-});
+}); 
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/settings.php'; 

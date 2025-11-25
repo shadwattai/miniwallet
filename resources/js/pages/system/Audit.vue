@@ -1,72 +1,472 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import { router } from '@inertiajs/vue3';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Toolbar from 'primevue/toolbar';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Paginator from 'primevue/paginator';
 import Skeleton from 'primevue/skeleton';
 import IconField from 'primevue/iconfield';
 import InputText from 'primevue/inputtext';
 import Calendar from 'primevue/calendar';
 import Select from 'primevue/select';
+import Tag from 'primevue/tag';
+import Badge from 'primevue/badge';
+import Dialog from 'primevue/dialog';
+import ScrollPanel from 'primevue/scrollpanel';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+
+interface AuditTrail {
+    id: number;
+    key: string;
+    action: string;
+    description: string;
+    table_name: string;
+    prev_data: any;
+    new_data: any;
+    action_time: string;
+    user_ip: string;
+    user_os: string;
+    user_browser: string;
+    user_device: string;
+    created_by: string;
+    created_at: string;
+    user_name: string;
+    user_email: string;
+}
+
+interface AuditStats {
+    total_actions: number;
+    unique_users: number;
+    creates: number;
+    reads: number;
+    updates: number;
+    deletes: number;
+    logins: number;
+    logouts: number;
+}
+
+const toast = useToast();
 
 const loading = ref(true);
-const dateRange = ref();
-const actionType = ref();
+const auditTrails = ref<AuditTrail[]>([]);
+const stats = ref<AuditStats | null>(null);
+const totalRecords = ref(0);
+const currentPage = ref(0);
+const perPage = ref(15);
+
+// Filters
+const searchTerm = ref('');
+const dateRange = ref<Date[] | null>(null);
+const actionType = ref<string | null>(null);
+
+// Details dialog
+const showDetailsDialog = ref(false);
+const selectedAuditTrail = ref<AuditTrail | null>(null);
 
 const actionTypes = [
     { label: 'All Actions', value: null },
-    { label: 'User Login', value: 'login' },
-    { label: 'User Registration', value: 'registration' },
-    { label: 'Transaction', value: 'transaction' },
-    { label: 'Settings Change', value: 'settings' },
+    { label: 'Create', value: 'create' },
+    { label: 'Read', value: 'read' },
+    { label: 'Update', value: 'update' },
+    { label: 'Delete', value: 'delete' },
+    { label: 'Login', value: 'login' },
+    { label: 'Logout', value: 'logout' },
+    { label: 'Approve', value: 'approve' },
+    { label: 'Decline', value: 'decline' },
 ];
 
-// Simulate initial loading
-onMounted(() => {
-    setTimeout(() => {
-        loading.value = false;
+// Computed properties
+const dateFrom = computed(() => {
+    return dateRange.value?.[0] ? dateRange.value[0].toISOString().split('T')[0] : null;
+});
+
+const dateTo = computed(() => {
+    return dateRange.value?.[1] ? dateRange.value[1].toISOString().split('T')[0] : null;
+});
+
+// Debounced search
+let searchTimeout: number;
+const debouncedSearch = ref('');
+
+watch(searchTerm, (newValue) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        debouncedSearch.value = newValue;
+        currentPage.value = 0;
+        loadAuditTrails();
     }, 500);
+});
+
+// Watch filters
+watch([actionType, dateFrom, dateTo], () => {
+    currentPage.value = 0;
+    loadAuditTrails();
+});
+
+// Load audit trails
+const loadAuditTrails = async () => {
+    try {
+        loading.value = true;
+        
+        const params = new URLSearchParams();
+        if (debouncedSearch.value) params.append('search', debouncedSearch.value);
+        if (actionType.value) params.append('action', actionType.value);
+        if (dateFrom.value) params.append('date_from', dateFrom.value);
+        if (dateTo.value) params.append('date_to', dateTo.value);
+        params.append('page', (currentPage.value + 1).toString());
+        params.append('per_page', perPage.value.toString());
+
+        const response = await fetch(`/miniwallet/settings/audit?${params.toString()}`);
+        const data = await response.json();
+
+        if (response.ok) {
+            auditTrails.value = data.auditTrails.data;
+            totalRecords.value = data.auditTrails.total;
+            stats.value = data.stats;
+        } else {
+            throw new Error(data.message || 'Failed to load audit trails');
+        }
+    } catch (error) {
+        console.error('Error loading audit trails:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to load audit trails'
+        });
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Pagination
+const onPageChange = (event: any) => {
+    currentPage.value = event.page;
+    loadAuditTrails();
+};
+
+// Action severity mapping
+const getActionSeverity = (action: string) => {
+    const severityMap: Record<string, string> = {
+        create: 'success',
+        read: 'info',
+        update: 'warn',
+        delete: 'danger',
+        login: 'success',
+        logout: 'secondary',
+        approve: 'success',
+        decline: 'danger'
+    };
+    return severityMap[action] || 'info';
+};
+
+// Format date
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+};
+
+// Show details
+const showDetails = (auditTrail: AuditTrail) => {
+    selectedAuditTrail.value = auditTrail;
+    showDetailsDialog.value = true;
+};
+
+// Clear filters
+const clearFilters = () => {
+    searchTerm.value = '';
+    debouncedSearch.value = '';
+    dateRange.value = null;
+    actionType.value = null;
+    currentPage.value = 0;
+    loadAuditTrails();
+};
+
+// Export functionality
+const exportAuditTrails = async () => {
+    try {
+        const params = new URLSearchParams();
+        if (debouncedSearch.value) params.append('search', debouncedSearch.value);
+        if (actionType.value) params.append('action', actionType.value);
+        if (dateFrom.value) params.append('date_from', dateFrom.value);
+        if (dateTo.value) params.append('date_to', dateTo.value);
+
+        const response = await fetch(`/miniwallet/settings/audit/export?${params.toString()}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            // Handle file download
+            toast.add({
+                severity: 'info',
+                summary: 'Export',
+                detail: 'Export functionality will be implemented'
+            });
+        }
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to export audit trails'
+        });
+    }
+};
+
+// Load data on mount
+onMounted(() => {
+    loadAuditTrails();
 });
 </script>
 
 <template>
+    <Toast />
+    
     <div>
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-4 gap-4 mb-4" v-if="stats">
+            <Card class="text-center border-l-4 border-blue-500">
+                <template #content>
+                    <div class="text-2xl font-bold text-blue-600">{{ stats.total_actions.toLocaleString() }}</div>
+                    <div class="text-sm text-gray-600">Total Actions</div>
+                </template>
+            </Card>
+            <Card class="text-center border-l-4 border-green-500">
+                <template #content>
+                    <div class="text-2xl font-bold text-green-600">{{ stats.unique_users }}</div>
+                    <div class="text-sm text-gray-600">Active Users</div>
+                </template>
+            </Card>
+            <Card class="text-center border-l-4 border-orange-500">
+                <template #content>
+                    <div class="text-2xl font-bold text-orange-600">{{ (stats.creates + stats.updates + stats.deletes).toLocaleString() }}</div>
+                    <div class="text-sm text-gray-600">Data Changes</div>
+                </template>
+            </Card>
+            <Card class="text-center border-l-4 border-purple-500">
+                <template #content>
+                    <div class="text-2xl font-bold text-purple-600">{{ (stats.logins + stats.logouts).toLocaleString() }}</div>
+                    <div class="text-sm text-gray-600">Login Sessions</div>
+                </template>
+            </Card>
+        </div>
+
+        <!-- Filters Toolbar -->
         <Toolbar class="mb-4" :style="{ justifyContent: 'space-between', borderRadius: '0px', marginTop: '-5px' }">
             <template #start>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <IconField>
-                        <InputText placeholder="Search audit logs..." class="w-120" disabled />
+                        <InputText 
+                            v-model="searchTerm" 
+                            placeholder="Search audit logs..." 
+                            class="w-120" 
+                        />
                     </IconField>
-                    <Calendar v-model="dateRange" selectionMode="range" placeholder="Date Range" disabled />
-                    <Select v-model="actionType" :options="actionTypes" 
-                        optionLabel="label" optionValue="value" 
-                        placeholder="Action Type" class="w-48" disabled />
+                    <Calendar 
+                        v-model="dateRange" 
+                        selectionMode="range" 
+                        placeholder="Date Range" 
+                        dateFormat="yy-mm-dd"
+                    />
+                    <Select 
+                        v-model="actionType" 
+                        :options="actionTypes" 
+                        optionLabel="label" 
+                        optionValue="value" 
+                        placeholder="Action Type" 
+                        class="w-48" 
+                    />
+                    <Button 
+                        label="Clear" 
+                        icon="pi pi-times" 
+                        severity="secondary" 
+                        outlined
+                        @click="clearFilters"
+                        size="small"
+                    />
                 </div>
             </template>
             <template #end>
-                <Button label="EXPORT" icon="pi pi-download" severity="secondary" outlined disabled />
+                <Button 
+                    label="EXPORT" 
+                    icon="pi pi-download" 
+                    severity="secondary" 
+                    outlined 
+                    @click="exportAuditTrails"
+                />
             </template>
         </Toolbar>
 
-        <div class="rounded border border-surface-200 dark:border-surface-700 p-6 bg-surface-0 dark:bg-surface-900"
-            v-if="loading">
-            <div v-for="i in [1, 2, 3, 4, 5]" :key="i">
-                <Skeleton width="100%" height="60px" class="mb-2"></Skeleton>
-            </div>
-        </div>
+        <!-- Loading Skeleton -->
+        <Card v-if="loading">
+            <template #content>
+                <div v-for="i in 5" :key="i" class="flex items-center gap-4 p-4 border-b">
+                    <Skeleton width="100px" height="30px"></Skeleton>
+                    <Skeleton width="200px" height="20px"></Skeleton>
+                    <Skeleton width="150px" height="20px"></Skeleton>
+                    <Skeleton width="100px" height="20px"></Skeleton>
+                </div>
+            </template>
+        </Card>
 
-        <div v-else class="text-center py-12 text-gray-500">
-            <i class="pi pi-history text-6xl mb-4 text-gray-300"></i>
-            <h3 class="text-xl mb-2">Audit Trail</h3>
-            <p class="mb-4">Comprehensive system activity tracking will be implemented here.</p>
-            <p class="text-sm">Features will include:</p>
-            <ul class="text-sm mt-2 text-left max-w-md mx-auto">
-                <li>• User activity logging</li>
-                <li>• Transaction audit trails</li>
-                <li>• System configuration changes</li>
-                <li>• Security event monitoring</li>
-                <li>• Detailed reporting and exports</li>
-            </ul>
-        </div>
+        <!-- Audit Trails Table -->
+        <Card v-else>
+            <template #content>
+                <DataTable 
+                    :value="auditTrails" 
+                    stripedRows 
+                    showGridlines
+                    :loading="loading"
+                    class="p-datatable-sm"
+                >
+                    <Column field="action_time" header="Time" style="width: 180px">
+                        <template #body="{ data }">
+                            <span class="text-sm">{{ formatDate(data.action_time) }}</span>
+                        </template>
+                    </Column>
+
+                    <Column field="action" header="Action" style="width: 100px">
+                        <template #body="{ data }">
+                            <Tag 
+                                :value="data.action.toUpperCase()" 
+                                :severity="getActionSeverity(data.action)"
+                                class="text-xs"
+                            />
+                        </template>
+                    </Column>
+
+                    <Column field="table_name" header="Table" style="width: 120px">
+                        <template #body="{ data }">
+                            <Badge 
+                                :value="data.table_name || 'system'" 
+                                severity="info"
+                                class="text-xs"
+                            />
+                        </template>
+                    </Column>
+
+                    <Column field="description" header="Description" style="width: auto">
+                        <template #body="{ data }">
+                            <span class="text-sm">{{ data.description || 'No description' }}</span>
+                        </template>
+                    </Column>
+
+                    <Column field="user_ip" header="IP Address" style="width: 130px">
+                        <template #body="{ data }">
+                            <span class="text-xs font-mono">{{ data.user_ip || 'Unknown' }}</span>
+                        </template>
+                    </Column>
+
+                    <Column field="created_by" header="User" style="width: 150px">
+                        <template #body="{ data }">
+                            <div class="text-xs">
+                                <div class="font-semibold">{{ data.user_name || 'Unknown User' }}</div>
+                                <!-- <div class="font-mono text-gray-500">{{ data.created_by?.substring(0, 8) || 'System' }}...</div> -->
+                            </div>
+                        </template>
+                    </Column>
+
+                    <Column header="Actions" style="width: 100px">
+                        <template #body="{ data }">
+                            <Button 
+                                icon="pi pi-eye" 
+                                severity="info" 
+                                text 
+                                size="small"
+                                @click="showDetails(data)"
+                                v-tooltip="'View Details'"
+                            />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <!-- Pagination -->
+                <Paginator 
+                    v-if="totalRecords > perPage"
+                    :rows="perPage" 
+                    :totalRecords="totalRecords"
+                    :first="currentPage * perPage"
+                    @page="onPageChange"
+                    class="mt-4"
+                />
+
+                <!-- No Data -->
+                <div v-if="auditTrails.length === 0 && !loading" class="text-center py-8 text-gray-500">
+                    <i class="pi pi-history text-4xl mb-2 text-gray-300"></i>
+                    <p>No audit trails found</p>
+                </div>
+            </template>
+        </Card>
+
+        <!-- Details Dialog -->
+        <Dialog 
+            v-model:visible="showDetailsDialog" 
+            modal 
+            header="Audit Trail Details" 
+            class="w-[800px]"
+        >
+            <div v-if="selectedAuditTrail" class="space-y-4">
+                <!-- Basic Info -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Action</label>
+                        <Tag 
+                            :value="selectedAuditTrail.action.toUpperCase()" 
+                            :severity="getActionSeverity(selectedAuditTrail.action)"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Time</label>
+                        <span class="text-sm">{{ formatDate(selectedAuditTrail.action_time) }}</span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Table</label>
+                        <Badge :value="selectedAuditTrail.table_name || 'system'" severity="info" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">IP Address</label>
+                        <span class="text-sm font-mono">{{ selectedAuditTrail.user_ip || 'Unknown' }}</span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-medium mb-1">Description</label>
+                    <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description' }}</p>
+                </div>
+
+                <!-- User Details -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">User</label>
+                        <div class="text-sm">
+                            <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}</div>
+                            <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by || 'System' }}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">User Agent</label>
+                        <span class="text-xs">{{ selectedAuditTrail.user_os || 'Unknown' }}</span>
+                    </div>
+                </div>
+
+                <!-- Data Changes -->
+                <div v-if="selectedAuditTrail.prev_data || selectedAuditTrail.new_data" class="grid grid-cols-2 gap-4">
+                    <div v-if="selectedAuditTrail.prev_data">
+                        <label class="block text-sm font-medium mb-1">Previous Data</label>
+                        <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
+                            <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.prev_data, null, 2) }}</pre>
+                        </ScrollPanel>
+                    </div>
+                    <div v-if="selectedAuditTrail.new_data">
+                        <label class="block text-sm font-medium mb-1">New Data</label>
+                        <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
+                            <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.new_data, null, 2) }}</pre>
+                        </ScrollPanel>
+                    </div>
+                </div>
+            </div>
+        </Dialog>
     </div>
 </template>

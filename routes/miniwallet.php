@@ -8,6 +8,7 @@ use App\Http\Controllers\UsersController;
 use App\Http\Controllers\WalletsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TransactionsController;
+use App\Http\Controllers\AuditController;
 
 Route::middleware(
     [
@@ -32,6 +33,10 @@ Route::middleware(
     Route::post('/settings/users', [
         UsersController::class, 'store'
     ])->name('settings.users.create');
+
+    // Audit routes (under settings)
+    Route::get('/settings/audit', [AuditController::class, 'index'])->name('settings.audit.index');
+    Route::post('/settings/audit/export', [AuditController::class, 'export'])->name('settings.audit.export');
 
 
 });

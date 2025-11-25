@@ -9,6 +9,7 @@ import TabPanels from 'primevue/tabpanels';
 import Tab from 'primevue/tab';
 import TabPanel from 'primevue/tabpanel';
 import { ref, onMounted } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 import Users from './Users.vue';
 import Banks from './Banks.vue';
@@ -70,6 +71,12 @@ const props = defineProps<{
 
 const loading = ref(true);
 
+// Handle banks update
+const handleBanksUpdated = () => {
+    // Refresh the page to get updated banks data
+    router.reload({ only: ['banks'] });
+};
+
 </script>
 
 <template> 
@@ -91,7 +98,10 @@ const loading = ref(true);
                     
                     <TabPanel value="1">
                         <Fieldset legend="Banks Management">
-                            <Banks :banks="props.banks"/>
+                            <Banks 
+                                :banks="props.banks" 
+                                @banks-updated="handleBanksUpdated"
+                            />
                         </Fieldset>
                     </TabPanel>
                     

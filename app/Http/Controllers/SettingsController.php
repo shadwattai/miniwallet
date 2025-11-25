@@ -12,8 +12,8 @@ class SettingsController extends Controller
 {
     public function index()
     { 
-       $users = (new UsersController())->getUsers(); 
        $banks = $this->getBanks();
+       $users = (new UsersController())->getUsers(); 
 
         return Inertia::render('system/Settings', [
             'User' => Auth::user(),
