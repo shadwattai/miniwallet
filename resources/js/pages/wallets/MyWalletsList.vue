@@ -9,6 +9,8 @@ import InputText from 'primevue/inputtext';
 import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
 import Divider from 'primevue/divider';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
 import {
     Wallet2 as WalletIcon,
     CreditCard,
@@ -30,6 +32,9 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useWalletForm } from '@/composables/useWalletForm';
+import { router } from '@inertiajs/vue3';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -72,6 +77,12 @@ const props = defineProps<{
 
 const hideBalances = ref(false);
 const showCreateDialog = ref(false);
+
+// Use confirmation dialog
+const confirm = useConfirm();
+
+// Use toast notifications
+const toast = useToast();
 
 // Use wallet form composable
 const {
@@ -143,6 +154,12 @@ const openCreateDialog = () => {
 const submitForm = () => {
     submitWalletForm(() => {
         showCreateDialog.value = false;
+        toast.add({
+            severity: 'success',
+            summary: 'Wallet Created',
+            detail: 'Your new wallet has been created successfully',
+            life: 4000
+        });
     });
 };
 
@@ -157,12 +174,105 @@ watch(() => form.bank_key, (newBankKey) => {
     resetCurrencyForBank(newBankKey, props.banks || []);
 });
 
+// Deactivate wallet function
+const deactivateWallet = (wallet: Wallet) => {
+    confirm.require({
+        message: `Are you sure you want to deactivate "${wallet.account_name}"? This wallet will no longer be accessible for transactions.`,
+        header: 'Deactivate Wallet',
+        icon: 'pi pi-exclamation-triangle',
+        rejectClass: 'p-button-secondary p-button-outlined',
+        rejectLabel: 'Cancel',
+        acceptClass: 'p-button-danger',
+        acceptLabel: 'Deactivate',
+        accept: () => {
+            // Submit deactivation request
+            router.post('/miniwallet/deactivatewallet', {
+                wallet_key: wallet.key
+            }, {
+                onSuccess: (page) => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Wallet Deactivated',
+                        detail: `"${wallet.account_name}" has been successfully deactivated`,
+                        life: 5000
+                    });
+                },
+                onError: (errors) => {
+                    console.error('Failed to deactivate wallet:', errors);
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Deactivation Failed',
+                        detail: errors.general || 'Failed to deactivate wallet. Please try again.',
+                        life: 5000
+                    });
+                }
+            });
+        },
+        reject: () => {
+            toast.add({
+                severity: 'info',
+                summary: 'Cancelled',
+                detail: 'Wallet deactivation was cancelled',
+                life: 3000
+            });
+        }
+    });
+};
+
+// Reactivate wallet function
+const reactivateWallet = (wallet: Wallet) => {
+    confirm.require({
+        message: `Are you sure you want to reactivate "${wallet.account_name}"? This wallet will become accessible for transactions again.`,
+        header: 'Reactivate Wallet',
+        icon: 'pi pi-question-circle',
+        rejectClass: 'p-button-secondary p-button-outlined',
+        rejectLabel: 'Cancel',
+        acceptClass: 'p-button-success',
+        acceptLabel: 'Reactivate',
+        accept: () => {
+            // Submit reactivation request
+            router.post('/miniwallet/reactivatewallet', {
+                wallet_key: wallet.key
+            }, {
+                onSuccess: (page) => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Wallet Reactivated',
+                        detail: `"${wallet.account_name}" has been successfully reactivated`,
+                        life: 5000
+                    });
+                },
+                onError: (errors) => {
+                    console.error('Failed to reactivate wallet:', errors);
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Reactivation Failed',
+                        detail: errors.general || 'Failed to reactivate wallet. Please try again.',
+                        life: 5000
+                    });
+                }
+            });
+        },
+        reject: () => {
+            toast.add({
+                severity: 'info',
+                summary: 'Cancelled',
+                detail: 'Wallet reactivation was cancelled',
+                life: 3000
+            });
+        }
+    });
+};
+
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs" :User="props.User">
 
         <Head title="My Wallets" />
+
+        <!-- Toast Component -->
+        <Toast />
 
         <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-2">
 
@@ -280,7 +390,8 @@ watch(() => form.bank_key, (newBankKey) => {
                                     </Button>
 
                                     <Button outlined severity="danger"
-                                        class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
+                                        @click="deactivateWallet(wallet)"
+                                        class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <Ban class="w-4 h-4" />
                                         Deactivate
                                     </Button>
@@ -295,13 +406,14 @@ watch(() => form.bank_key, (newBankKey) => {
                                     </Button>
                                     
                                     <Button outlined severity="warn"
-                                        class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
+                                        class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <MinusCircle class="w-4 h-4" />
                                         Withdraw
                                     </Button>
 
                                     <Button outlined severity="danger"
-                                        class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
+                                        @click="deactivateWallet(wallet)"
+                                        class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <Ban class="w-4 h-4" />
                                         Deactivate
                                     </Button>
@@ -355,7 +467,10 @@ watch(() => form.bank_key, (newBankKey) => {
                                 </p>
                             </div>
 
-                            <button class="w-full bg-gray-100 text-gray-600 text-sm font-medium py-2 px-3 rounded-lg">
+                            <button 
+                                @click="reactivateWallet(wallet)"
+                                class="w-full bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2">
+                                <Plus class="w-4 h-4" />
                                 Reactivate Account
                             </button>
                         </div>
@@ -459,6 +574,9 @@ watch(() => form.bank_key, (newBankKey) => {
                 </div>
             </template>
         </Dialog>
+
+        <!-- Confirmation Dialog -->
+        <ConfirmDialog />
     </AppLayout>
 </template>
 
