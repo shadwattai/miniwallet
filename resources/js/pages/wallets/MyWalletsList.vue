@@ -84,6 +84,7 @@ const showCreateDialog = ref(false);
 // Deposit dialog state
 const showDepositDialog = ref(false);
 const selectedWalletForDeposit = ref<Wallet | null>(null);
+const depositAmount = ref('');
 
 // Deposit form
 const depositForm = useForm({
@@ -114,7 +115,7 @@ const availableCurrencies = computed(() => {
 });
 
 const totalBalance = computed(() => {
-    if (!props.wallets) return 0;
+    if (!props.wallets || !Array.isArray(props.wallets)) return 0;
     return props.wallets
         .filter(wallet => wallet.is_active)
         .reduce((sum, wallet) => sum + Number(wallet.balance), 0);
@@ -153,11 +154,13 @@ const formatBalance = (balance: number, currency: string) => {
 };
 
 const activeWallets = computed(() => {
-    return props.wallets?.filter(wallet => wallet.is_active) || [];
+    if (!props.wallets || !Array.isArray(props.wallets)) return [];
+    return props.wallets.filter(wallet => wallet.is_active);
 });
 
 const inactiveWallets = computed(() => {
-    return props.wallets?.filter(wallet => !wallet.is_active) || [];
+    if (!props.wallets || !Array.isArray(props.wallets)) return [];
+    return props.wallets.filter(wallet => !wallet.is_active);
 });
 
 const openCreateDialog = () => {
@@ -284,6 +287,7 @@ const openDepositDialog = (wallet: Wallet) => {
     depositForm.wallet_key = wallet.key;
     depositForm.amount = 0;
     depositForm.description = '';
+    depositAmount.value = '';
     depositForm.clearErrors();
     showDepositDialog.value = true;
 };
@@ -292,12 +296,16 @@ const openDepositDialog = (wallet: Wallet) => {
 const closeDepositDialog = () => {
     showDepositDialog.value = false;
     selectedWalletForDeposit.value = null;
+    depositAmount.value = '';
     depositForm.reset();
     depositForm.clearErrors();
 };
 
 // Submit deposit form
 const submitDepositForm = () => {
+    // Convert string amount to number
+    depositForm.amount = parseFloat(depositAmount.value) || 0;
+    
     depositForm.post('/miniwallet/deposit', {
         onSuccess: () => {
             toast.add({
@@ -659,20 +667,20 @@ const submitDepositForm = () => {
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <DollarSign class="w-4 h-4" />
-                            Deposit Amount
+                            Deposit Amount ({{ selectedWalletForDeposit?.currency || 'AED' }})
                         </label>
-                        <InputNumber
-                            v-model="depositForm.amount"
-                            :min="1"
-                            :max="1000000"
-                            :minFractionDigits="2"
-                            :maxFractionDigits="2"
-                            :suffix="` ${selectedWalletForDeposit?.currency || ''}`"
-                            placeholder="Enter amount to deposit"
+                        <InputText
+                            v-model="depositAmount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0.00"
                             class="w-full"
                             :class="{ 'p-invalid': depositForm.errors.amount }"
+                            inputId="deposit-amount"
                         />
                         <small v-if="depositForm.errors.amount" class="text-red-500">{{ depositForm.errors.amount }}</small>
+                        <small v-else class="text-gray-500">Enter the amount you want to deposit</small>
                     </div>
 
                     <!-- Description Field -->
@@ -704,11 +712,11 @@ const submitDepositForm = () => {
                         <Button
                             type="submit"
                             :loading="depositForm.processing"
-                            :disabled="!depositForm.amount || depositForm.amount <= 0"
+                            :disabled="!depositAmount || parseFloat(depositAmount) <= 0"
                             class="flex-1 bg-green-500 hover:bg-green-600"
                         >
                             <DollarSign class="w-4 h-4 mr-2" />
-                            Deposit {{ selectedWalletForDeposit?.currency }} {{ depositForm.amount?.toLocaleString('en-US', {
+                            Deposit {{ selectedWalletForDeposit?.currency }} {{ parseFloat(depositAmount)?.toLocaleString('en-US', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
                             }) || '0.00' }}

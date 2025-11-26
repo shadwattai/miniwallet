@@ -231,84 +231,69 @@ class UsersController extends Controller
     /**
      * Create initial wallet account for a new user
      * This method is called during registration when user is not yet authenticated
+     * It's completely static and doesn't depend on any authenticated controllers
      */
     public static function CreateUserInitialAccount($user)
     {
         try {
-            // Avoid any controller dependencies - use only DB facade
+            // Use only DB facade - no controller dependencies
             $bank = DB::table('wlt_banks')
-                ->select('key')
-                ->where('is_active', true)
-                ->first();
+                ->select('key')->where('is_active', true)->first();
 
             if (!$bank) {
-                Log::warning('No active banks available for initial account creation');
+                Log::warning('No active banks available for initial account creation', [
+                    'user_key' => $user->key ?? 'unknown'
+                ]);
                 return null;
             }
 
-            // Generate unique account number with retry logic
-            $maxAttempts = 5;
-            $accountNumber = null;
-
-            for ($i = 0; $i < $maxAttempts; $i++) {
-                $accountNumber = rand(6001, 6399) . str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99);
+            $accountNumber = rand(6001, 6399) . str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99);
 
 
-                // Check if account number already exists
-                $exists = DB::table('wlt_accounts')
-                    ->where('account_number', $accountNumber)
-                    ->exists();
-
-                if (!$exists) {
-                    break; // Unique number found
-                }
-
-                if ($i === $maxAttempts - 1) {
-                    Log::error('Failed to generate unique account number after ' . $maxAttempts . ' attempts');
-                    return null;
-                }
-            }
-
-            // Prepare minimal account data - only required fields
+            // Prepare account data following the exact schema
             $accountData = [
                 'user_key' => $user->key,
                 'bank_key' => $bank->key,
                 'account_number' => $accountNumber,
-                'account_name' => $user->name . ' - Initial Account',
-                'account_type' => 'initial',
+                'account_name' => $user->name,
+                'account_type' => 'initial', // Use 'initial' to match schema constraints
                 'currency' => 'AED',
                 'balance' => 0.00,
                 'is_active' => true,
-                'is_default' => true,
+                'is_default' => false,
                 'version' => 1,
                 'created_by' => $user->key,
                 'updated_by' => $user->key,
-                'key' => DB::raw('uuid_generate_v4()'),
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
+                'deleted_by' => null,
+                'deleted_at' => null
             ];
-            
-            // Insert with UUID generation
-            $inserted = DB::table('wlt_accounts')->insert($accountData);
- 
+
+            // Direct database insertion with UUID generation
+            $inserted = DB::table('wlt_accounts')->insert(array_merge($accountData, [
+                'key' => DB::raw('uuid_generate_v4()')
+            ]));
+
             if ($inserted) {
-                Log::info('Initial wallet account created successfully', [
+                Log::info('Initial wallet account created for new user', [
                     'user_key' => $user->key,
                     'user_name' => $user->name,
                     'account_number' => $accountNumber
                 ]);
                 return $accountNumber;
-            } else {
-                Log::error('Failed to insert initial account record');
-                return null;
             }
+
+            Log::error('Failed to insert initial wallet account');
+            return null;
         } catch (\Exception $e) {
-            Log::error('Exception creating initial account for user', [
+            Log::error('Exception while creating initial wallet account', [
                 'user_key' => $user->key ?? 'unknown',
                 'user_name' => $user->name ?? 'unknown',
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
             return null;
         }
