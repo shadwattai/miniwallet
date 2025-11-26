@@ -1,16 +1,17 @@
 <?php
 
 namespace App\Http\Controllers;
- 
+
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Hash, Log, Auth};
+use Illuminate\Support\Facades\{Hash, Log, Auth, DB};
 use App\Http\Controllers\Artifacts\CreateController;
 use App\Http\Controllers\Artifacts\ReadController;
 use App\Http\Controllers\Artifacts\UpdateController;
 use App\Http\Controllers\Artifacts\DeleteController;
+use GuzzleHttp\Promise\Create;
 
 class UsersController extends Controller
-{ 
+{
     private $readController;
     private $createController;
     private $updateController;
@@ -50,14 +51,14 @@ class UsersController extends Controller
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
                 'handle' => '@' . strtolower(str_replace(' ', '.', $validated['name'])),
-                'password' => Hash::make('password123'), // Default password
+                'password' => Hash::make('123456789'), // Default password
                 'status' => 'active',
                 'role' => 'user',
             ];
 
             // Use Artifacts API CreateController with audit trail
             $userKey = $this->createController->CreateSingleRow(
-                'users', 
+                'users',
                 $userData,
                 'User registration: ' . $validated['name'],
                 [
@@ -67,12 +68,15 @@ class UsersController extends Controller
                 ]
             );
 
+            $user = (new ReadController())->GetSingleRow('users', ['key' => $userKey]);
+
+            $this->CreateUserInitialAccount($user);
+
             if ($userKey) {
                 return back()->with('success', 'User created successfully');
             } else {
                 return back()->withErrors(['error' => 'Failed to create user']);
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to create user: ' . $e->getMessage(), [
                 'data' => $validated,
@@ -82,7 +86,7 @@ class UsersController extends Controller
         }
     }
 
-    
+
 
     // PATCH /miniwallet/users/{key} - Update user
     public function update(Request $request, $key)
@@ -103,8 +107,8 @@ class UsersController extends Controller
 
             // Use Artifacts API UpdateController with audit trail
             $result = $this->updateController->UpdateSingleRow(
-                'users', 
-                $key, 
+                'users',
+                $key,
                 $validated,
                 'User profile updated: ' . $currentUser->name,
                 [
@@ -119,7 +123,6 @@ class UsersController extends Controller
             } else {
                 return back()->with('info', 'No changes were made to the user');
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to update user: ' . $e->getMessage(), [
                 'key' => $key,
@@ -136,7 +139,7 @@ class UsersController extends Controller
         try {
             // Get user details first for validation using Artifacts API
             $user = $this->readController->GetSingleRow('users', $key);
-            
+
             if (!$user) {
                 return back()->withErrors(['error' => 'User not found']);
             }
@@ -148,7 +151,7 @@ class UsersController extends Controller
 
             // Use Artifacts API DeleteController with audit trail
             $deleted = $this->deleteController->DeleteRow(
-                'users', 
+                'users',
                 $key,
                 'User account deleted: ' . $user->name,
                 [
@@ -164,7 +167,6 @@ class UsersController extends Controller
             } else {
                 return back()->withErrors(['error' => 'Failed to delete user']);
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to delete user: ' . $e->getMessage(), [
                 'key' => $key,
@@ -179,32 +181,34 @@ class UsersController extends Controller
     {
         try {
             $user = $this->readController->GetSingleRow('users', $key);
-            
+
             if (!$user) {
                 return response()->json(['error' => 'User not found'], 404);
             }
-            
+
             return response()->json($user);
         } catch (\Exception $e) {
             Log::error('Failed to retrieve user: ' . $e->getMessage(), ['key' => $key]);
             return response()->json(['error' => 'Failed to retrieve user'], 500);
         }
-    }    // GET /miniwallet/users/search - Search users
+    }
+
+    // GET /miniwallet/users/search - Search users
     public function search(Request $request)
     {
         try {
             $readController = new ReadController();
-            
+
             $searchCriteria = [];
-            
+
             if ($request->has('status')) {
                 $searchCriteria['status'] = $request->get('status');
             }
-            
+
             if ($request->has('role')) {
                 $searchCriteria['role'] = $request->get('role');
             }
-            
+
             if ($request->has('email')) {
                 $searchCriteria['email'] = [
                     'operator' => 'LIKE',
@@ -213,7 +217,7 @@ class UsersController extends Controller
             }
 
             $users = $readController->SearchRows('users', $searchCriteria, $request->get('limit', 100));
-            
+
             return response()->json($users);
         } catch (\Exception $e) {
             Log::error('Failed to search users: ' . $e->getMessage(), [
@@ -223,141 +227,90 @@ class UsersController extends Controller
         }
     }
 
-    // PATCH /miniwallet/users/{key}/status - Toggle user status
-    public function toggleStatus($key)
+
+    /**
+     * Create initial wallet account for a new user
+     * This method is called during registration when user is not yet authenticated
+     */
+    public static function CreateUserInitialAccount($user)
     {
         try {
-            $updateController = new UpdateController();
-            $result = $updateController->ToggleField('users', $key, 'status');
-            
-            if ($result) {
-                return back()->with('success', 'User status updated successfully');
-            } else {
-                return back()->withErrors(['error' => 'Failed to update user status']);
+            // Avoid any controller dependencies - use only DB facade
+            $bank = DB::table('wlt_banks')
+                ->select('key')
+                ->where('is_active', true)
+                ->first();
+
+            if (!$bank) {
+                Log::warning('No active banks available for initial account creation');
+                return null;
             }
 
-        } catch (\Exception $e) {
-            Log::error('Failed to toggle user status: ' . $e->getMessage(), ['key' => $key]);
-            return back()->withErrors(['error' => 'Failed to update user status: ' . $e->getMessage()]);
-        }
-    }
+            // Generate unique account number with retry logic
+            $maxAttempts = 5;
+            $accountNumber = null;
 
-    // POST /miniwallet/users/bulk - Bulk operations
-    public function bulkUpdate(Request $request)
-    {
-        $validated = $request->validate([
-            'operations' => 'required|array',
-            'operations.*.key' => 'required|string',
-            'operations.*.data' => 'required|array',
-            'operations.*.data.name' => 'sometimes|string|max:255',
-            'operations.*.data.status' => 'sometimes|in:active,inactive',
-        ]);
+            for ($i = 0; $i < $maxAttempts; $i++) {
+                $accountNumber = rand(6001, 6399) . str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99);
 
-        try {
-            $updateController = new UpdateController();
-            
-            $updates = [];
-            foreach ($validated['operations'] as $operation) {
-                $updates[$operation['key']] = $operation['data'];
-            }
-            
-            $results = $updateController->BulkUpdateRows('users', $updates);
-            
-            $successCount = count(array_filter($results['results'], fn($r) => $r['updated']));
-            $totalCount = count($updates);
-            
-            return back()->with('success', "Bulk update completed: {$successCount}/{$totalCount} users updated");
 
-        } catch (\Exception $e) {
-            Log::error('Failed to bulk update users: ' . $e->getMessage(), [
-                'operations' => $validated['operations']
-            ]);
-            return back()->withErrors(['error' => 'Bulk update failed: ' . $e->getMessage()]);
-        }
-    }
+                // Check if account number already exists
+                $exists = DB::table('wlt_accounts')
+                    ->where('account_number', $accountNumber)
+                    ->exists();
 
-    // GET /miniwallet/users/stats - Get user statistics
-    public function getStats()
-    {
-        try {
-            $readController = new ReadController();
-            $stats = $readController->GetTableStats('users');
-            
-            // Add custom user-specific stats
-            $activeUsers = $readController->CountRows('users', ['status' => 'active']);
-            $inactiveUsers = $readController->CountRows('users', ['status' => 'inactive']);
-            $adminUsers = $readController->CountRows('users', ['role' => 'admin']);
-            
-            $customStats = [
-                'admin_users' => $adminUsers,
-                'active_users' => $activeUsers,
-                'inactive_users' => $inactiveUsers,
-                'user_users' => $readController->CountRows('users', ['role' => 'user']),
-            ];
-            
-            return response()->json(array_merge($stats, $customStats));
-        } catch (\Exception $e) {
-            Log::error('Failed to get user statistics: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to get statistics'], 500);
-        }
-    }
+                if (!$exists) {
+                    break; // Unique number found
+                }
 
-    // DELETE /miniwallet/users/bulk - Bulk delete
-    public function bulkDelete(Request $request)
-    {
-        $validated = $request->validate([
-            'keys' => 'required|array',
-            'keys.*' => 'required|string',
-        ]);
-
-        try {
-            $readController = new ReadController();
-            $deleteController = new DeleteController();
-            
-            // Validate all users exist and aren't admins
-            $validKeys = [];
-            foreach ($validated['keys'] as $key) {
-                $user = $readController->GetSingleRow('users', $key);
-                if ($user && $user->role !== 'admin') {
-                    $validKeys[] = $key;
+                if ($i === $maxAttempts - 1) {
+                    Log::error('Failed to generate unique account number after ' . $maxAttempts . ' attempts');
+                    return null;
                 }
             }
-            
-            if (empty($validKeys)) {
-                return back()->withErrors(['error' => 'No valid users selected for deletion']);
-            }
-            
-            $results = $deleteController->BulkDeleteRows('users', $validKeys);
-            
-            $successCount = count(array_filter($results));
-            $totalCount = count($validKeys);
-            
-            return back()->with('success', "Bulk delete completed: {$successCount}/{$totalCount} users deleted");
 
-        } catch (\Exception $e) {
-            Log::error('Failed to bulk delete users: ' . $e->getMessage(), [
-                'keys' => $validated['keys']
-            ]);
-            return back()->withErrors(['error' => 'Bulk delete failed: ' . $e->getMessage()]);
-        }
-    }
-
-    // POST /miniwallet/users/{key}/restore - Restore soft deleted user
-    public function restore($key)
-    {
-        try {
-            $updateController = new UpdateController();
-            $result = $updateController->RestoreRow('users', $key);
+            // Prepare minimal account data - only required fields
+            $accountData = [
+                'user_key' => $user->key,
+                'bank_key' => $bank->key,
+                'account_number' => $accountNumber,
+                'account_name' => $user->name . ' - Initial Account',
+                'account_type' => 'initial',
+                'currency' => 'AED',
+                'balance' => 0.00,
+                'is_active' => true,
+                'is_default' => true,
+                'version' => 1,
+                'created_by' => $user->key,
+                'updated_by' => $user->key,
+                'key' => DB::raw('uuid_generate_v4()'),
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
             
-            if ($result) {
-                return back()->with('success', 'User restored successfully');
+            // Insert with UUID generation
+            $inserted = DB::table('wlt_accounts')->insert($accountData);
+ 
+            if ($inserted) {
+                Log::info('Initial wallet account created successfully', [
+                    'user_key' => $user->key,
+                    'user_name' => $user->name,
+                    'account_number' => $accountNumber
+                ]);
+                return $accountNumber;
             } else {
-                return back()->withErrors(['error' => 'Failed to restore user']);
+                Log::error('Failed to insert initial account record');
+                return null;
             }
-
         } catch (\Exception $e) {
-            Log::error('Failed to restore user: ' . $e->getMessage(), ['key' => $key]);
-            return back()->withErrors(['error' => 'Failed to restore user: ' . $e->getMessage()]);
+            Log::error('Exception creating initial account for user', [
+                'user_key' => $user->key ?? 'unknown',
+                'user_name' => $user->name ?? 'unknown',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return null;
         }
     }
 }

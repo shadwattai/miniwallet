@@ -20,7 +20,7 @@ return new class extends Migration
             $table->uuid('bank_key');
             $table->string('account_number', 20)->unique();
             $table->string('account_name');
-            $table->string('account_type', 20)->default('wallet'); // wallet, savings, checking
+            $table->string('account_type', 20)->default('wallet'); // wallet, savings, checking, initial
             $table->string('currency', 3)->default('AED');
             $table->decimal('balance', 26, 2)->default(0);
             $table->boolean('is_active')->default(true);

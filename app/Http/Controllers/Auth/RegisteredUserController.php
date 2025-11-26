@@ -10,10 +10,12 @@ use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\{Hash, DB};
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Http\Controllers\Artifacts\ReadController;
+use App\Http\Controllers\Artifacts\CreateController;
 
 class RegisteredUserController extends Controller
 {
@@ -58,8 +60,8 @@ class RegisteredUserController extends Controller
             'updated_by' => $creator_key,
         ]);
 
-        // create user bank account
-        $bnk = (UsersController::class)::createUserBankAccount($user);
+        // Create initial wallet account
+        UsersController::CreateUserInitialAccount($user);
  
 
         event(new Registered($user));

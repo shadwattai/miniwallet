@@ -94,4 +94,5 @@ Route::middleware(
     Route::post('/wallet', [WalletsController::class, 'createWallet'])->name('wallets.create');
     Route::post('/deactivatewallet', [WalletsController::class, 'deactivateWallet'])->name('wallets.deactivate');
     Route::post('/reactivatewallet', [WalletsController::class, 'reactivateWallet'])->name('wallets.reactivate');
+    Route::post('/deposit', [WalletsController::class, 'depositMoney'])->name('wallets.deposit');
 });

@@ -11,6 +11,7 @@ import Checkbox from 'primevue/checkbox';
 import Divider from 'primevue/divider';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
+import InputNumber from 'primevue/inputnumber';
 import {
     Wallet2 as WalletIcon,
     CreditCard,
@@ -28,13 +29,15 @@ import {
     Save,
     X,
     Ban,
-    MinusCircle
+    MinusCircle,
+    Hash
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useWalletForm } from '@/composables/useWalletForm';
 import { router } from '@inertiajs/vue3';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
+import { useForm } from '@inertiajs/vue3';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -77,6 +80,17 @@ const props = defineProps<{
 
 const hideBalances = ref(false);
 const showCreateDialog = ref(false);
+
+// Deposit dialog state
+const showDepositDialog = ref(false);
+const selectedWalletForDeposit = ref<Wallet | null>(null);
+
+// Deposit form
+const depositForm = useForm({
+    wallet_key: '',
+    amount: 0,
+    description: ''
+});
 
 // Use confirmation dialog
 const confirm = useConfirm();
@@ -264,6 +278,47 @@ const reactivateWallet = (wallet: Wallet) => {
     });
 };
 
+// Open deposit dialog
+const openDepositDialog = (wallet: Wallet) => {
+    selectedWalletForDeposit.value = wallet;
+    depositForm.wallet_key = wallet.key;
+    depositForm.amount = 0;
+    depositForm.description = '';
+    depositForm.clearErrors();
+    showDepositDialog.value = true;
+};
+
+// Close deposit dialog
+const closeDepositDialog = () => {
+    showDepositDialog.value = false;
+    selectedWalletForDeposit.value = null;
+    depositForm.reset();
+    depositForm.clearErrors();
+};
+
+// Submit deposit form
+const submitDepositForm = () => {
+    depositForm.post('/miniwallet/deposit', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Deposit Successful',
+                detail: `${selectedWalletForDeposit.value?.currency} ${depositForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been deposited to "${selectedWalletForDeposit.value?.account_name}"`,
+                life: 5000
+            });
+            closeDepositDialog();
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: 'error',
+                summary: 'Deposit Failed',
+                detail: errors.general || 'Failed to deposit money. Please try again.',
+                life: 5000
+            });
+        }
+    });
+};
+
 </script>
 
 <template>
@@ -400,6 +455,7 @@ const reactivateWallet = (wallet: Wallet) => {
                                 <!-- Savings Account: Only Deposit -->
                                 <template v-else>
                                     <Button outlined severity="success"
+                                        @click="openDepositDialog(wallet)"
                                         class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <Plus class="w-4 h-4" />
                                         Deposit
@@ -573,6 +629,93 @@ const reactivateWallet = (wallet: Wallet) => {
                     </Button>
                 </div>
             </template>
+        </Dialog>
+
+        <!-- Deposit Money Dialog -->
+        <Dialog v-model:visible="showDepositDialog" modal header="Deposit Money" class="w-[500px]">
+            <div class="space-y-6">
+                <!-- Wallet Information -->
+                <div v-if="selectedWalletForDeposit" class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <PiggyBank class="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ selectedWalletForDeposit.account_name }}</h4>
+                            <p class="text-sm text-gray-600">{{ selectedWalletForDeposit.account_number }}</p>
+                            <p class="text-sm text-green-600 font-medium">
+                                Current Balance: {{ selectedWalletForDeposit.currency }} {{ Number(selectedWalletForDeposit.balance).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deposit Form -->
+                <form @submit.prevent="submitDepositForm" class="space-y-4">
+                    <!-- Amount Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <DollarSign class="w-4 h-4" />
+                            Deposit Amount
+                        </label>
+                        <InputNumber
+                            v-model="depositForm.amount"
+                            :min="1"
+                            :max="1000000"
+                            :minFractionDigits="2"
+                            :maxFractionDigits="2"
+                            :suffix="` ${selectedWalletForDeposit?.currency || ''}`"
+                            placeholder="Enter amount to deposit"
+                            class="w-full"
+                            :class="{ 'p-invalid': depositForm.errors.amount }"
+                        />
+                        <small v-if="depositForm.errors.amount" class="text-red-500">{{ depositForm.errors.amount }}</small>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Hash class="w-4 h-4" />
+                            Description (Optional)
+                        </label>
+                        <InputText
+                            v-model="depositForm.description"
+                            placeholder="Enter deposit description"
+                            maxlength="255"
+                            class="w-full"
+                        />
+                        <small class="text-gray-500">Add a note for this deposit (optional)</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            outlined
+                            @click="closeDepositDialog"
+                            class="flex-1"
+                            :disabled="depositForm.processing"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            :loading="depositForm.processing"
+                            :disabled="!depositForm.amount || depositForm.amount <= 0"
+                            class="flex-1 bg-green-500 hover:bg-green-600"
+                        >
+                            <DollarSign class="w-4 h-4 mr-2" />
+                            Deposit {{ selectedWalletForDeposit?.currency }} {{ depositForm.amount?.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) || '0.00' }}
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </Dialog>
 
         <!-- Confirmation Dialog -->
