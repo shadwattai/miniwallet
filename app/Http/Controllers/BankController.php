@@ -11,12 +11,20 @@ use App\Http\Controllers\Artifacts\CreateController;
 use App\Http\Controllers\Artifacts\ReadController;
 use App\Http\Controllers\Artifacts\UpdateController;
 use App\Http\Controllers\Artifacts\DeleteController;
+use Inertia\Inertia;
 
 class BankController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    public function index()
+    {
+        $banks = $this->getBanks();
+
+            return $banks; 
+    }
+
     public function getBanks()
     {
         try {
@@ -183,6 +191,42 @@ class BankController extends Controller
 
         } catch (\Exception $e) {
             return Redirect::back()->withErrors(['error' => 'Failed to update bank: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get banks for wallet creation (returns Inertia response)
+     */
+    public function getBanksForWallets()
+    {
+        try {
+            $readController = new ReadController();
+            $banksData = $readController->GetAllRows('wlt_banks', 1000);
+            
+            // Filter and format banks for dropdown
+            $banks = collect($banksData)->filter(function($bank) {
+                return $bank['is_active'] == 1; // Only active banks
+            })->map(function($bank) {
+                return [
+                    'key' => $bank['key'],
+                    'bank_name' => $bank['bank_name'],
+                    'bank_code' => $bank['bank_code'],
+                    'swift_code' => $bank['swift_code'],
+                    'supported_currencies' => json_decode($bank['supported_currencies'] ?? '["AED"]', true)
+                ];
+            })->values()->all();
+
+            // Return current page with banks data
+            return Inertia::render('wallets/MyWalletsList', [
+                'banks' => $banks
+            ]);
+            
+        } catch (\Exception $e) {
+            // Return error response but still with Inertia
+            return Inertia::render('wallets/MyWalletsList', [
+                'banks' => [],
+                'error' => 'Failed to load banks: ' . $e->getMessage()
+            ]);
         }
     }
 

@@ -112,7 +112,7 @@ watch([actionType, dateFrom, dateTo], () => {
 const loadAuditTrails = async () => {
     try {
         loading.value = true;
-        
+
         const params = new URLSearchParams();
         if (debouncedSearch.value) params.append('search', debouncedSearch.value);
         if (actionType.value) params.append('action', actionType.value);
@@ -193,7 +193,7 @@ onMounted(() => {
 
 <template>
     <Toast />
-    
+
     <div>
         <!-- Statistics Cards -->
         <div class="grid grid-cols-4 gap-4 mb-4" v-if="stats">
@@ -211,13 +211,15 @@ onMounted(() => {
             </Card>
             <Card class="text-center border-l-4 border-orange-500">
                 <template #content>
-                    <div class="text-2xl font-bold text-orange-600">{{ (stats.creates + stats.updates + stats.deletes).toLocaleString() }}</div>
+                    <div class="text-2xl font-bold text-orange-600">{{ (stats.creates + stats.updates +
+                        stats.deletes).toLocaleString() }}</div>
                     <div class="text-sm text-gray-600">Data Changes</div>
                 </template>
             </Card>
             <Card class="text-center border-l-4 border-purple-500">
                 <template #content>
-                    <div class="text-2xl font-bold text-purple-600">{{ (stats.logins + stats.logouts).toLocaleString() }}</div>
+                    <div class="text-2xl font-bold text-purple-600">{{ (stats.logins + stats.logouts).toLocaleString()
+                    }}</div>
                     <div class="text-sm text-gray-600">Login Sessions</div>
                 </template>
             </Card>
@@ -228,34 +230,14 @@ onMounted(() => {
             <template #start>
                 <div class="flex gap-2 flex-wrap">
                     <IconField>
-                        <InputText 
-                            v-model="searchTerm" 
-                            placeholder="Search audit logs..." 
-                            class="w-120" 
-                        />
+                        <InputText v-model="searchTerm" placeholder="Search audit logs..." class="w-120" />
                     </IconField>
-                    <Calendar 
-                        v-model="dateRange" 
-                        selectionMode="range" 
-                        placeholder="Date Range" 
-                        dateFormat="yy-mm-dd"
-                    />
-                    <Select 
-                        v-model="actionType" 
-                        :options="actionTypes" 
-                        optionLabel="label" 
-                        optionValue="value" 
-                        placeholder="Action Type" 
-                        class="w-48" 
-                    />
-                    <Button 
-                        label="Clear" 
-                        icon="pi pi-times" 
-                        severity="secondary" 
-                        outlined
-                        @click="clearFilters"
-                        size="small"
-                    />
+                    <Calendar v-model="dateRange" selectionMode="range" placeholder="Date Range"
+                        dateFormat="yy-mm-dd" />
+                    <Select v-model="actionType" :options="actionTypes" optionLabel="label" optionValue="value"
+                        placeholder="Action Type" class="w-48" />
+                    <Button label="Clear" icon="pi pi-times" severity="secondary" outlined @click="clearFilters"
+                        size="small" />
                 </div>
             </template>
         </Toolbar>
@@ -275,13 +257,7 @@ onMounted(() => {
         <!-- Audit Trails Table -->
         <Card v-else>
             <template #content>
-                <DataTable 
-                    :value="auditTrails" 
-                    stripedRows 
-                    showGridlines
-                    :loading="loading"
-                    class="p-datatable-sm"
-                >
+                <DataTable :value="auditTrails" stripedRows showGridlines :loading="loading" class="p-datatable-sm">
                     <Column field="action_time" header="Time" style="width: 180px">
                         <template #body="{ data }">
                             <span class="text-sm">{{ formatDate(data.action_time) }}</span>
@@ -290,21 +266,14 @@ onMounted(() => {
 
                     <Column field="action" header="Action" style="width: 100px">
                         <template #body="{ data }">
-                            <Tag 
-                                :value="data.action.toUpperCase()" 
-                                :severity="getActionSeverity(data.action)"
-                                class="text-xs"
-                            />
+                            <Tag :value="data.action.toUpperCase()" :severity="getActionSeverity(data.action)"
+                                class="text-xs" />
                         </template>
                     </Column>
 
                     <Column field="table_name" header="Table" style="width: 120px">
                         <template #body="{ data }">
-                            <Badge 
-                                :value="data.table_name || 'system'" 
-                                severity="info"
-                                class="text-xs"
-                            />
+                            <Badge :value="data.table_name || 'system'" severity="info" class="text-xs" />
                         </template>
                     </Column>
 
@@ -331,27 +300,15 @@ onMounted(() => {
 
                     <Column header="Actions" style="width: 100px">
                         <template #body="{ data }">
-                            <Button 
-                                icon="pi pi-eye" 
-                                severity="info" 
-                                text 
-                                size="small"
-                                @click="showDetails(data)"
-                                v-tooltip="'View Details'"
-                            />
+                            <Button icon="pi pi-eye" severity="info" text size="small" @click="showDetails(data)"
+                                v-tooltip="'View Details'" />
                         </template>
                     </Column>
                 </DataTable>
 
                 <!-- Pagination -->
-                <Paginator 
-                    v-if="totalRecords > perPage"
-                    :rows="perPage" 
-                    :totalRecords="totalRecords"
-                    :first="currentPage * perPage"
-                    @page="onPageChange"
-                    class="mt-4"
-                />
+                <Paginator v-if="totalRecords > perPage" :rows="perPage" :totalRecords="totalRecords"
+                    :first="currentPage * perPage" @page="onPageChange" class="mt-4" />
 
                 <!-- No Data -->
                 <div v-if="auditTrails.length === 0 && !loading" class="text-center py-8 text-gray-500">
@@ -362,12 +319,7 @@ onMounted(() => {
         </Card>
 
         <!-- Details Dialog -->
-        <Dialog 
-            v-model:visible="showDetailsDialog" 
-            modal 
-            header="Audit Trail Details" 
-            class="w-[800px]"
-        >
+        <Dialog v-model:visible="showDetailsDialog" modal header="Audit Trail Details" class="w-[800px]">
             <Fieldset legend="Audit Record Information" v-if="selectedAuditTrail">
                 <div class="space-y-4">
                     <!-- Basic Info -->
@@ -375,10 +327,8 @@ onMounted(() => {
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">Action</label>
-                                <Tag 
-                                    :value="selectedAuditTrail.action.toUpperCase()" 
-                                    :severity="getActionSeverity(selectedAuditTrail.action)"
-                                />
+                                <Tag :value="selectedAuditTrail.action.toUpperCase()"
+                                    :severity="getActionSeverity(selectedAuditTrail.action)" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Time</label>
@@ -397,7 +347,8 @@ onMounted(() => {
 
                     <!-- Description -->
                     <Fieldset legend="Description" class="mb-4">
-                        <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description' }}</p>
+                        <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description'
+                        }}</p>
                     </Fieldset>
 
                     <!-- User Details -->
@@ -406,8 +357,11 @@ onMounted(() => {
                             <div>
                                 <label class="block text-sm font-medium mb-1">User</label>
                                 <div class="text-sm">
-                                    <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}</div>
-                                    <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by || 'System' }}</div>
+                                    <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}
+                                    </div>
+                                    <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by ||
+                                        'System' }}
+                                    </div>
                                 </div>
                             </div>
                             <div>
@@ -420,17 +374,15 @@ onMounted(() => {
                     <!-- Data Changes -->
                     <Fieldset legend="Data Changes" v-if="selectedAuditTrail.prev_data || selectedAuditTrail.new_data">
                         <div class="grid grid-cols-2 gap-4">
-                            <div v-if="selectedAuditTrail.prev_data">
-                                <label class="block text-sm font-medium mb-1">Previous Data</label>
-                                <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
-                                    <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.prev_data, null, 2) }}</pre>
-                                </ScrollPanel>
+                            <!-- Previous Data -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Previous Data</label>
+                                <pre class="text-xs overflow-auto max-h-64 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words w-full">{{ selectedAuditTrail.prev_data ? JSON.stringify(selectedAuditTrail.prev_data, null, 2) : 'No previous data' }}</pre>
                             </div>
-                            <div v-if="selectedAuditTrail.new_data">
-                                <label class="block text-sm font-medium mb-1">New Data</label>
-                                <ScrollPanel style="width: 100%; height: 200px" class="bg-gray-50 rounded">
-                                    <pre class="text-xs">{{ JSON.stringify(selectedAuditTrail.new_data, null, 2) }}</pre>
-                                </ScrollPanel>
+                            <!-- New Data -->
+                            <div>
+                                <label class="block text-sm font-medium mb-2">New Data</label>
+                                <pre class="text-xs overflow-auto max-h-64 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words w-full">{{ selectedAuditTrail.new_data ? JSON.stringify(selectedAuditTrail.new_data, null, 2) : 'No new data' }}</pre>
                             </div>
                         </div>
                     </Fieldset>

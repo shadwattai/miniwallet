@@ -12,7 +12,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Create audit_action enum type first
+        // Drop the enum type if it exists, then create it
+        DB::statement('DROP TYPE IF EXISTS audit_action CASCADE');
         DB::statement("CREATE TYPE audit_action AS ENUM ('create', 'read', 'update', 'delete', 'prepare', 'review', 'approve', 'decline', 'search', 'print', 'login', 'logout')");
  
         Schema::create('users_audit_trails', function (Blueprint $table) {

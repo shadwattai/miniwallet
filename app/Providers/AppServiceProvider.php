@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
-use App\Http\Controllers\Artifacts\ConstantsController;
+use Illuminate\Support\Facades\{Auth}; 
 
+use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Inertia::share('const', function () {
-           // return true; //(new ConstantsController())->getAppConstants();
+           return ['User' => Auth::user()];
         });
     }
 }

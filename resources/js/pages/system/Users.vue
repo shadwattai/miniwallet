@@ -68,7 +68,7 @@ const getAvatarUrl = (user: User) => {
     if (!user.avatar) {
         return getAvatarInitials(user);
     } else {
-        return `/photos/profile/${user.avatar}`;
+        return `/avatars/${user.avatar}`;
     }
 };
 
@@ -300,9 +300,7 @@ const performStatusUpdate = async (user: User, action: string) => {
             <Card v-for="usr in filteredUsers" :key="usr.key"
                 :style="{ 'box-shadow': '0 2px 12px 0 rgba(0, 0, 0, 0.1)', 'border-radius': '6px', 'overflow': 'hidden' }">
                 <template #header>
-                    <img v-if="!usr.avatar" alt="user header" :src="getAvatarUrl(usr)" class="h-28 object-cover" />
-                    <img v-if="usr.avatar" alt="user header" :src="getAvatarUrl(usr)"
-                        class="w-full h-64 object-cover" />
+                    <img :src="getAvatarUrl(usr)" :alt="usr.name" class="w-full h-64 object-cover" />
                 </template>
                 <template #title>
                     <p class="capitalize">{{ usr.name.substring(0, 16) }}</p>
@@ -333,8 +331,11 @@ const performStatusUpdate = async (user: User, action: string) => {
         
         <div v-if="selectedUser" class="space-y-4">
             <div class="text-center">
-                <img :src="getAvatarUrl(selectedUser)" :alt="selectedUser.name"
-                    class="w-24 h-24 rounded-full mx-auto mb-4 object-cover" />
+                <img 
+                    :src="getAvatarUrl(selectedUser)" 
+                    :alt="selectedUser.name"
+                    class="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-gray-200"
+                />
                 <span class="font-bold">{{ selectedUser.name }}</span>
             </div>
 

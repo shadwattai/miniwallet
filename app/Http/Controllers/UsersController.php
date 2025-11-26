@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
  
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Hash, Log};
+use Illuminate\Support\Facades\{Hash, Log, Auth};
 use App\Http\Controllers\Artifacts\CreateController;
 use App\Http\Controllers\Artifacts\ReadController;
 use App\Http\Controllers\Artifacts\UpdateController;
@@ -11,12 +11,23 @@ use App\Http\Controllers\Artifacts\DeleteController;
 
 class UsersController extends Controller
 { 
+    private $readController;
+    private $createController;
+    private $updateController;
+    private $deleteController;
+
+    public function __construct()
+    {
+        $this->readController = new ReadController();
+        $this->createController = new CreateController();
+        $this->updateController = new UpdateController();
+        $this->deleteController = new DeleteController();
+    }
+
     public function getUsers()
     {
         try {
-            $readController = new ReadController();
-            $users = $readController->GetAllRows('users', 1000);
-            
+            $users = $this->readController->GetAllRows('users', 1000);
             return $users;
         } catch (\Exception $e) {
             Log::error('Failed to retrieve users: ' . $e->getMessage());
@@ -24,7 +35,7 @@ class UsersController extends Controller
         }
     }
 
-    // POST /miniwallet/users - Create new user
+    // POST /miniwallet/settings/users - Create new user
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -34,8 +45,6 @@ class UsersController extends Controller
         ]);
 
         try {
-            $createController = new CreateController();
-            
             $userData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -46,17 +55,34 @@ class UsersController extends Controller
                 'role' => 'user',
             ];
 
-            $userKey = $createController->CreateSingleRow('users', $userData);
+            // Use Artifacts API CreateController with audit trail
+            $userKey = $this->createController->CreateSingleRow(
+                'users', 
+                $userData,
+                'User registration: ' . $validated['name'],
+                [
+                    'registered_by' => Auth::user()->name ?? 'System',
+                    'registration_method' => 'admin_panel',
+                    'initial_status' => 'active'
+                ]
+            );
 
-            return back()->with('success', 'User created successfully');
+            if ($userKey) {
+                return back()->with('success', 'User created successfully');
+            } else {
+                return back()->withErrors(['error' => 'Failed to create user']);
+            }
 
         } catch (\Exception $e) {
             Log::error('Failed to create user: ' . $e->getMessage(), [
-                'data' => $validated
+                'data' => $validated,
+                'created_by' => Auth::user()->key ?? 'system'
             ]);
             return back()->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()]);
         }
     }
+
+    
 
     // PATCH /miniwallet/users/{key} - Update user
     public function update(Request $request, $key)
@@ -69,9 +95,24 @@ class UsersController extends Controller
         ]);
 
         try {
-            $updateController = new UpdateController();
-            
-            $result = $updateController->UpdateSingleRow('users', $key, $validated);
+            // Get current user data for audit comparison
+            $currentUser = $this->readController->GetSingleRow('users', $key);
+            if (!$currentUser) {
+                return back()->withErrors(['error' => 'User not found']);
+            }
+
+            // Use Artifacts API UpdateController with audit trail
+            $result = $this->updateController->UpdateSingleRow(
+                'users', 
+                $key, 
+                $validated,
+                'User profile updated: ' . $currentUser->name,
+                [
+                    'updated_by' => Auth::user()->name ?? 'System',
+                    'update_method' => 'admin_panel',
+                    'fields_updated' => array_keys($validated)
+                ]
+            );
 
             if ($result['updated']) {
                 return back()->with('success', 'User updated successfully');
@@ -82,21 +123,19 @@ class UsersController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to update user: ' . $e->getMessage(), [
                 'key' => $key,
-                'data' => $validated
+                'data' => $validated,
+                'updated_by' => Auth::user()->key ?? 'system'
             ]);
             return back()->withErrors(['error' => 'Failed to update user: ' . $e->getMessage()]);
         }
     }
 
-    // DELETE /miniwallet/users/{key} - Soft delete user
+    // DELETE /miniwallet/users/{key} - Delete user
     public function destroy($key)
     {
         try {
-            $readController = new ReadController();
-            $deleteController = new DeleteController();
-            
-            // Get user details first for validation
-            $user = $readController->GetSingleRow('users', $key);
+            // Get user details first for validation using Artifacts API
+            $user = $this->readController->GetSingleRow('users', $key);
             
             if (!$user) {
                 return back()->withErrors(['error' => 'User not found']);
@@ -107,7 +146,18 @@ class UsersController extends Controller
                 return back()->withErrors(['error' => 'Cannot delete admin users']);
             }
 
-            $deleted = $deleteController->DeleteRow('users', $key);
+            // Use Artifacts API DeleteController with audit trail
+            $deleted = $this->deleteController->DeleteRow(
+                'users', 
+                $key,
+                'User account deleted: ' . $user->name,
+                [
+                    'deleted_by' => Auth::user()->name ?? 'System',
+                    'deletion_method' => 'admin_panel',
+                    'user_role' => $user->role,
+                    'user_status' => $user->status
+                ]
+            );
 
             if ($deleted) {
                 return back()->with('success', 'User deleted successfully');
@@ -117,7 +167,8 @@ class UsersController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to delete user: ' . $e->getMessage(), [
-                'key' => $key
+                'key' => $key,
+                'deleted_by' => Auth::user()->key ?? 'system'
             ]);
             return back()->withErrors(['error' => 'Failed to delete user: ' . $e->getMessage()]);
         }
@@ -127,8 +178,7 @@ class UsersController extends Controller
     public function show($key)
     {
         try {
-            $readController = new ReadController();
-            $user = $readController->GetSingleRow('users', $key);
+            $user = $this->readController->GetSingleRow('users', $key);
             
             if (!$user) {
                 return response()->json(['error' => 'User not found'], 404);
@@ -139,9 +189,7 @@ class UsersController extends Controller
             Log::error('Failed to retrieve user: ' . $e->getMessage(), ['key' => $key]);
             return response()->json(['error' => 'Failed to retrieve user'], 500);
         }
-    }
-
-    // GET /miniwallet/users/search - Search users
+    }    // GET /miniwallet/users/search - Search users
     public function search(Request $request)
     {
         try {

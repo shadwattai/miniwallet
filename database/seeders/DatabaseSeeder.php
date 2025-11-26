@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
     {  
         DB::table('users')->truncate(); 
         DB::table('wlt_banks')->truncate(); 
+        DB::table('wlt_accounts')->truncate(); 
 
         $masterpass = '$2y$12$LqW3PUWK8Z4We8MXTYnsJ.9sDN.GWfyWYRC9WAe4e5rhhNlP5UTwq';
         $systemRootKey = 'fadf94db-6d13-4328-a7ab-92ee2a1b5090';
@@ -118,13 +119,16 @@ class DatabaseSeeder extends Seeder
             'created_by' => $systemRootKey,
         ]);
 
-        User::factory(294)->create([
+        User::factory(10)->create([
             'created_by' => $systemRootKey,
             'status' => 'active',
         ]); 
 
         // Seed Banks
         $this->seedBanks($systemRootKey);
+        
+        // Seed Wallet Accounts
+        $this->seedWalletAccounts($systemRootKey);
     }
 
     /**
@@ -379,5 +383,117 @@ class DatabaseSeeder extends Seeder
             DB::table('wlt_banks')->insert($bank);
         }
 
+    }
+
+    /**
+     * Seed wallet accounts data
+     */
+    private function seedWalletAccounts(string $systemRootKey): void
+    {
+        $users = [
+
+            'fadf94db-6d13-4328-a7ab-92ee2a1b5090', // System Root
+            '7d2200c9-1001-413b-a6c4-0e14978a7df4', // Lisa Williams
+            '5627f1ac-bda7-477d-ab76-5f4c134a4d39', // Ada Lovelace
+        ];
+
+        // Get bank keys for seeded banks
+        $bankKeys = DB::table('wlt_banks')->pluck('key')->toArray();
+
+        $accountTypes = ['wallet', 'savings', 'checking'];
+        $currencies = ['AED', 'USD', 'EUR'];
+
+        $accounts = [];
+
+        // Create accounts for specific users
+        foreach ($users as $userKey) {
+            // Create 2-3 accounts per user
+            $numberOfAccounts = rand(2, 3);
+            
+            for ($i = 0; $i < $numberOfAccounts; $i++) {
+                $bankKey = $bankKeys[array_rand($bankKeys)];
+                $accountType = $accountTypes[array_rand($accountTypes)];
+                $currency = $currencies[array_rand($currencies)];
+                
+                $accounts[] = [
+                    'key' => Str::uuid(),
+                    'user_key' => $userKey,
+                    'bank_key' => $bankKey,
+                    'account_number' => '6401'.str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
+                    'account_name' => $this->generateAccountName($accountType),
+                    'account_type' => $accountType,
+                    'currency' => $currency,
+                    'balance' => $this->generateBalance($accountType),
+                    'is_active' => rand(0, 10) > 1, // 90% chance of being active
+                    'is_default' => $i === 0, // First account is default
+                    'created_by' => $systemRootKey,
+                    'updated_by' => $systemRootKey,
+                ];
+            }
+        }
+
+        // Create a few more random accounts for other users
+        $otherUsers = DB::table('users')
+            ->whereNotIn('key', $users)
+            ->where('key', '!=', $systemRootKey)
+            ->limit(5)
+            ->pluck('key')
+            ->toArray();
+
+        foreach ($otherUsers as $userKey) {
+            $bankKey = $bankKeys[array_rand($bankKeys)];
+            $accountType = $accountTypes[array_rand($accountTypes)];
+            $currency = $currencies[array_rand($currencies)];
+            
+            $accounts[] = [
+                'key' => Str::uuid(),
+                'user_key' => $userKey,
+                'bank_key' => $bankKey,
+                'account_number' => '6501'.str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
+                'account_name' => $this->generateAccountName($accountType),
+                'account_type' => $accountType,
+                'currency' => $currency,
+                'balance' => $this->generateBalance($accountType),
+                'is_active' => rand(0, 10) > 1, // 90% chance of being active
+                'is_default' => true, // Only account, so it's default
+                'created_by' => $systemRootKey,
+                'updated_by' => $systemRootKey,
+            ];
+        }
+
+        foreach ($accounts as $account) {
+            DB::table('wlt_accounts')->insert($account);
+        }
+    }
+
+    /**
+     * Generate account name based on type
+     */
+    private function generateAccountName(string $accountType): string
+    {
+        $names = [
+            'wallet' => ['Main Wallet', 'Personal Wallet', 'Digital Wallet', 'Primary Wallet'],
+            'savings' => ['Emergency Fund', 'Vacation Savings', 'Home Savings', 'Future Plans'],
+            'checking' => ['Daily Expenses', 'Business Account', 'Monthly Budget', 'Primary Checking'],
+        ];
+
+        return $names[$accountType][array_rand($names[$accountType])];
+    }
+
+    /**
+     * Generate realistic balance based on account type
+     */
+    private function generateBalance(string $accountType): float
+    {
+        switch ($accountType) {
+            case 'wallet':
+                return rand(100, 5000) + (rand(0, 99) / 100); // 100 to 5000 with cents
+            case 'savings':
+                return rand(5000, 50000) + (rand(0, 99) / 100); // 5000 to 50000 with cents
+            case 'checking':
+                return rand(500, 15000) + (rand(0, 99) / 100); // 500 to 15000 with cents
+            default:
+                return rand(100, 1000) + (rand(0, 99) / 100);
+        }
     }
 }

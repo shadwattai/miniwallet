@@ -17,10 +17,6 @@ Route::middleware(
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
 
-});
-
-// Bank management routes
-Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('banks', BankController::class);
 }); 
 

@@ -65,7 +65,7 @@ defineProps<{
                     </Form>
                 </div>
 
-                <div class="text-center text-sm text-muted-foreground mt-6" hidden>
+                <div class="text-center text-sm text-muted-foreground mt-6" >
                     Don't have an account?
                     <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
                 </div>
