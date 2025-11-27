@@ -40,10 +40,10 @@ Route::middleware(
         'getMyWallets'
     ])->name('mywallets');
 
-    Route::get('/transactions', [
-        TransactionsController::class,
-        'getTransactions'
-    ])->name('transactions');
+    // Route::get('/transactions', [
+    //     TransactionsController::class,
+    //     'getTransactions'
+    // ])->name('transactions');
 
     Route::get('/settings', [
         SettingsController::class,

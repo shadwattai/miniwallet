@@ -6,11 +6,10 @@ import { Head } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Dropdown from 'primevue/dropdown';
-import Calendar from 'primevue/calendar';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
+import Calendar from 'primevue/calendar'; 
 import Badge from 'primevue/badge';
 import Card from 'primevue/card';
+import Dialog from 'primevue/dialog';
 import {
     Search,
     Filter,
@@ -20,19 +19,13 @@ import {
     ArrowRightLeft,
     Plus,
     Minus,
-    DollarSign,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertTriangle,
+    DollarSign, 
     Calendar as CalendarIcon,
     TrendingUp,
-    TrendingDown,
-    Eye,
+    TrendingDown, 
     MoreHorizontal,
     Receipt,
-    User,
-    Building2
+    User, 
 } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
 
@@ -73,82 +66,11 @@ const selectedType = ref('');
 const selectedStatus = ref('');
 const selectedDateRange = ref([]);
 const showFilters = ref(false);
+const showDetailsDialog = ref(false);
+const selectedTransaction = ref<Transaction | null>(null);
 
-// Mock data for development - replace with props.transactions in production
-const mockTransactions = ref<Transaction[]>([
-    {
-        key: '1',
-        ref_number: 'DP202411270001',
-        sender_acct_key: 'acc_001',
-        receiver_acct_key: 'acc_002',
-        description: 'Monthly salary deposit',
-        type: 'deposit',
-        amount: 5000.00,
-        commission_fee: 0,
-        status: 'completed',
-        created_at: '2024-11-27T10:30:00Z',
-        updated_at: '2024-11-27T10:30:00Z',
-        sender_account_name: 'Initial Account',
-        receiver_account_name: 'Main Savings',
-        sender_user_name: 'System',
-        receiver_user_name: 'John Doe',
-        currency: 'AED'
-    },
-    {
-        key: '2', 
-        ref_number: 'TR202411270002',
-        sender_acct_key: 'acc_002',
-        receiver_acct_key: 'acc_003',
-        description: 'Money transfer to friend',
-        type: 'transfer',
-        amount: 150.00,
-        commission_fee: 2.25,
-        status: 'completed',
-        created_at: '2024-11-27T14:15:00Z',
-        updated_at: '2024-11-27T14:15:00Z',
-        sender_account_name: 'Main Wallet',
-        receiver_account_name: 'Sarah\'s Wallet',
-        sender_user_name: 'John Doe',
-        receiver_user_name: 'Sarah Smith',
-        currency: 'AED'
-    },
-    {
-        key: '3',
-        ref_number: 'WD202411270003', 
-        sender_acct_key: 'acc_002',
-        receiver_acct_key: 'acc_001',
-        description: 'ATM withdrawal',
-        type: 'withdrawal',
-        amount: 200.00,
-        commission_fee: 0,
-        status: 'completed',
-        created_at: '2024-11-26T16:45:00Z',
-        updated_at: '2024-11-26T16:45:00Z',
-        sender_account_name: 'Main Savings',
-        receiver_account_name: 'Initial Account',
-        sender_user_name: 'John Doe',
-        receiver_user_name: 'System',
-        currency: 'AED'
-    },
-    {
-        key: '4',
-        ref_number: 'TU202411270004',
-        sender_acct_key: 'acc_002',
-        receiver_acct_key: 'acc_004',
-        description: 'Top up digital wallet',
-        type: 'topup',
-        amount: 300.00,
-        commission_fee: 0,
-        status: 'pending',
-        created_at: '2024-11-27T09:20:00Z',
-        updated_at: '2024-11-27T09:20:00Z',
-        sender_account_name: 'Main Savings',
-        receiver_account_name: 'Digital Wallet',
-        sender_user_name: 'John Doe',
-        receiver_user_name: 'John Doe',
-        currency: 'AED'
-    }
-]);
+// Use backend transactions only
+const transactionsData = computed(() => props.transactions || []);
 
 // Filter options
 const transactionTypes = [
@@ -169,7 +91,7 @@ const transactionStatuses = [
 
 // Computed properties
 const filteredTransactions = computed(() => {
-    let filtered = props.transactions || mockTransactions.value;
+    let filtered = transactionsData.value;
 
     // Search filter
     if (searchQuery.value) {
@@ -208,7 +130,7 @@ const filteredTransactions = computed(() => {
 });
 
 const transactionStats = computed(() => {
-    const transactions = props.transactions || mockTransactions.value;
+    const transactions = transactionsData.value;
     const today = new Date();
     const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     
@@ -298,8 +220,14 @@ const clearFilters = () => {
     selectedDateRange.value = [];
 };
 
- 
-
+function openTransactionDetails(transaction: Transaction) {
+    selectedTransaction.value = transaction;
+    showDetailsDialog.value = true;
+}
+function closeTransactionDetails() {
+    showDetailsDialog.value = false;
+    selectedTransaction.value = null;
+}
 </script>
 
 <template>
@@ -553,6 +481,7 @@ const clearFilters = () => {
                                     outlined
                                     size="small"
                                     class="text-gray-400 border-gray-200 hover:bg-gray-50"
+                                    @click="openTransactionDetails(transaction)"
                                 >
                                     <MoreHorizontal class="w-4 h-4" />
                                 </Button>
@@ -561,6 +490,101 @@ const clearFilters = () => {
                     </div>
                 </template>
             </Card>
+
+            <!-- Transaction Details Dialog -->
+            <Dialog v-model:visible="showDetailsDialog" modal header="Transaction Details" class="w-[600px]" @hide="closeTransactionDetails">
+                <fieldset class="border border-gray-200 rounded-lg p-6">
+                    <legend class="px-2 text-base font-semibold text-gray-700">Transaction Details</legend>
+                    <div v-if="selectedTransaction" class="space-y-4">
+                        <div class="flex items-center gap-3">
+                            <div :class="`p-3 rounded-full ${getTransactionColor(selectedTransaction.type)}`">
+                                <component :is="getTransactionIcon(selectedTransaction.type)" class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold capitalize">{{ selectedTransaction.type }}</h2>
+                                <span class="text-xs text-gray-500">{{ formatDate(selectedTransaction.created_at) }}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Reference</span>
+                                <span class="font-mono">{{ selectedTransaction.ref_number }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Status</span>
+                                <Badge :value="selectedTransaction.status.toUpperCase()" :severity="getStatusColor(selectedTransaction.status)" />
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Amount</span>
+                                <span :class="{
+                                    'text-green-600': selectedTransaction.type === 'deposit',
+                                    'text-red-600': selectedTransaction.type === 'withdrawal' || selectedTransaction.type === 'transfer',
+                                    'text-blue-600': selectedTransaction.type === 'topup'
+                                }">
+                                    {{ selectedTransaction.type === 'deposit' || selectedTransaction.type === 'topup' ? '+' : '-' }}{{ formatAmount(selectedTransaction.amount, selectedTransaction.currency) }}
+                                </span>
+                            </div>
+                            <div v-if="selectedTransaction.commission_fee > 0" class="flex justify-between text-sm">
+                                <span class="text-gray-500">Fee</span>
+                                <span class="text-orange-600">{{ formatAmount(selectedTransaction.commission_fee, selectedTransaction.currency) }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">From</span>
+                                <span>{{ selectedTransaction.sender_user_name }} ({{ selectedTransaction.sender_account_name }})</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">To</span>
+                                <span>{{ selectedTransaction.receiver_user_name }} ({{ selectedTransaction.receiver_account_name }})</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Description</span>
+                                <span class="text-right">{{ selectedTransaction.description }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <br>
+                <Accordion class="mt-6" :activeIndex="[0]">
+        <AccordionTab header="Double Entry Details">
+            <div v-if="selectedTransaction">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Debit Entry -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <div class="font-semibold text-gray-700 mb-2">Debit</div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">Account</span>
+                            <span>{{ selectedTransaction.sender_account_name }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">User</span>
+                            <span>{{ selectedTransaction.sender_user_name }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">Amount</span>
+                            <span class="text-red-600">-{{ formatAmount(selectedTransaction.amount, selectedTransaction.currency) }}</span>
+                        </div>
+                    </div>
+                    <!-- Credit Entry -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <div class="font-semibold text-gray-700 mb-2">Credit</div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">Account</span>
+                            <span>{{ selectedTransaction.receiver_account_name }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">User</span>
+                            <span>{{ selectedTransaction.receiver_user_name }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-500">Amount</span>
+                            <span class="text-green-600">+{{ formatAmount(selectedTransaction.amount, selectedTransaction.currency) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </AccordionTab>
+    </Accordion>
+            </Dialog>
         </div>
     </AppLayout>
 </template>

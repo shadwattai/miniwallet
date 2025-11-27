@@ -31,6 +31,7 @@ class TransactionsController extends Controller
     public function getTransactions()
     {
         $user = Auth::user();
+        $role = $user->role;
 
         // Fetch transactions for the authenticated user with user and account information
         $transactions = DB::table('wlt_transactions as t')
@@ -56,9 +57,13 @@ class TransactionsController extends Controller
                 'sender_user.name as sender_user_name',
                 'receiver_user.name as receiver_user_name'
             )
-            ->where(function($query) use ($user) {
-                $query->where('sender_acc.user_key', $user->key)
-                      ->orWhere('receiver_acc.user_key', $user->key);
+            ->where(function ($query) use ($user) {
+                if ($user->role === 'admin') {
+                    return; // Admins can see all transactions
+                } else {
+                    $query->where('sender_acc.user_key', $user->key);
+                    $query->orWhere('receiver_acc.user_key', $user->key);
+                }
             })
             ->orderBy('t.created_at', 'desc')
             ->get();
@@ -151,7 +156,7 @@ class TransactionsController extends Controller
 
             // 2. Create double-entry transaction details
             // CreateController will automatically handle key, created_by, updated_by, created_at, updated_at
-            
+
             // Credit entry for initial account (money going out of initial account)
             $credit_entry = [
                 'trxn_key' => $trxn_key,
@@ -222,7 +227,6 @@ class TransactionsController extends Controller
                 'new_balance' => $newBalance,
                 'ref_number' => $ref_number
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -322,7 +326,7 @@ class TransactionsController extends Controller
             }
 
             // 2. Create double-entry transaction details (opposite of deposit)
-            
+
             // Credit entry for savings account (money going out of savings account)
             $credit_entry = [
                 'trxn_key' => $trxn_key,
@@ -392,7 +396,6 @@ class TransactionsController extends Controller
                 'new_balance' => $newBalance,
                 'ref_number' => $ref_number
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -507,7 +510,7 @@ class TransactionsController extends Controller
 
             // 2. Create double-entry transaction details
             // Following exact wlt_transactions_details schema
-            
+
             // Credit entry for source account (money going out of savings)
             $credit_entry = [
                 'trxn_key' => $trxn_key,
@@ -590,7 +593,6 @@ class TransactionsController extends Controller
                 'new_source_balance' => $newSourceBalance,
                 'ref_number' => $ref_number
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -679,8 +681,8 @@ class TransactionsController extends Controller
             // Check if sender has sufficient balance for transfer + commission
             if ($senderCurrentBalance < $totalDebitAmount) {
                 return back()->withErrors([
-                    'amount' => 'Insufficient funds. Required: ' . $sender_wallet->currency . ' ' . number_format($totalDebitAmount, 2) . 
-                              ' (Transfer: ' . number_format($transferAmount, 2) . ' + Commission: ' . number_format($commissionFee, 2) . ').'
+                    'amount' => 'Insufficient funds. Required: ' . $sender_wallet->currency . ' ' . number_format($totalDebitAmount, 2) .
+                        ' (Transfer: ' . number_format($transferAmount, 2) . ' + Commission: ' . number_format($commissionFee, 2) . ').'
                 ]);
             }
 
@@ -695,7 +697,7 @@ class TransactionsController extends Controller
 
             $system_accounts = $this->readController->SearchRows('wlt_accounts', [
                 'user_key' => $root_user[0]->key,
-                'account_type' => 'initial',
+                'account_type' => 'savings',
                 'is_active' => true
             ]);
 
@@ -732,7 +734,7 @@ class TransactionsController extends Controller
             }
 
             // 2. Create transaction details (3 entries for transfer with commission)
-            
+
             // Entry 1: Credit sender wallet (total amount out: transfer + commission)
             $sender_credit_entry = [
                 'trxn_key' => $trxn_key,
@@ -779,7 +781,7 @@ class TransactionsController extends Controller
             }
 
             // 3. Update wallet balances
-            
+
             // Update sender wallet (subtract total amount)
             $senderUpdateResult = $this->updateController->UpdateSingleRow('wlt_accounts', $validated['sender_wallet_key'], [
                 'balance' => $newSenderBalance,
@@ -792,7 +794,14 @@ class TransactionsController extends Controller
                 'version' => $receiver_wallet->version + 1
             ]);
 
-            if (!$senderUpdateResult || !$receiverUpdateResult) {
+            // Update systems account (add commission fee amount)
+            $newSystemBalance = floatval($system_account->balance) + $commissionFee;
+            $systemUpdateResult = $this->updateController->UpdateSingleRow('wlt_accounts', $system_account->key, [
+                'balance' => $newSystemBalance,
+                'version' => $system_account->version + 1
+            ]);
+
+            if (!$senderUpdateResult || !$receiverUpdateResult || !$systemUpdateResult) {
                 // Rollback if balance updates fail
                 $this->deleteController->DeleteRow('wlt_transactions', $trxn_key);
                 $this->deleteController->DeleteRow('wlt_transactions_details', $sender_detail_key);
@@ -829,7 +838,6 @@ class TransactionsController extends Controller
             ]);
 
             return redirect()->route('mywallets')->with('success', 'Transfer completed successfully');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -861,10 +869,10 @@ class TransactionsController extends Controller
                 ->select('key', 'name', 'email', 'handle')
                 ->where('status', 'active')
                 ->whereNull('deleted_at')
-                ->where(function($q) use ($query) {
+                ->where(function ($q) use ($query) {
                     $q->where('name', 'like', "%{$query}%")
-                      ->orWhere('email', 'like', "%{$query}%")
-                      ->orWhere('handle', 'like', "%{$query}%");
+                        ->orWhere('email', 'like', "%{$query}%")
+                        ->orWhere('handle', 'like', "%{$query}%");
                 })
                 ->limit(10) // Limit users to avoid too many results
                 ->get();
@@ -877,7 +885,7 @@ class TransactionsController extends Controller
                     ->select(
                         'key',
                         'user_key',
-                        'account_name', 
+                        'account_name',
                         'account_number',
                         'currency',
                         'balance'
@@ -886,14 +894,14 @@ class TransactionsController extends Controller
                     ->where('account_type', 'wallet')
                     ->where('is_active', true)
                     ->whereNull('deleted_at')
-                    ->when($excludeWallet, function($q, $exclude) {
+                    ->when($excludeWallet, function ($q, $exclude) {
                         return $q->where('key', '!=', $exclude);
                     })
-                    ->when($currency, function($q, $curr) {
+                    ->when($currency, function ($q, $curr) {
                         return $q->where('currency', $curr);
                     })
                     ->get()
-                    ->map(function($wallet) use ($user) {
+                    ->map(function ($wallet) use ($user) {
                         $wallet->user_name = $user->name;
                         $wallet->user_email = $user->email;
                         $wallet->user_handle = $user->handle;
@@ -909,7 +917,7 @@ class TransactionsController extends Controller
                 ->select(
                     'wlt_accounts.key',
                     'wlt_accounts.user_key',
-                    'wlt_accounts.account_name', 
+                    'wlt_accounts.account_name',
                     'wlt_accounts.account_number',
                     'wlt_accounts.currency',
                     'wlt_accounts.balance',
@@ -922,14 +930,14 @@ class TransactionsController extends Controller
                 ->where('users.status', 'active')
                 ->whereNull('wlt_accounts.deleted_at')
                 ->whereNull('users.deleted_at')
-                ->where(function($q) use ($query) {
+                ->where(function ($q) use ($query) {
                     $q->where('wlt_accounts.account_name', 'like', "%{$query}%")
-                      ->orWhere('wlt_accounts.account_number', 'like', "%{$query}%");
+                        ->orWhere('wlt_accounts.account_number', 'like', "%{$query}%");
                 })
-                ->when($excludeWallet, function($q, $exclude) {
+                ->when($excludeWallet, function ($q, $exclude) {
                     return $q->where('wlt_accounts.key', '!=', $exclude);
                 })
-                ->when($currency, function($q, $curr) {
+                ->when($currency, function ($q, $curr) {
                     return $q->where('wlt_accounts.currency', $curr);
                 })
                 ->get();
@@ -944,7 +952,6 @@ class TransactionsController extends Controller
                 'wallets' => $allWallets,
                 'total' => $allWallets->count()
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to search wallets', [
                 'error' => $e->getMessage(),
