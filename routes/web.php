@@ -35,7 +35,15 @@ Route::middleware(
 
 // Broadcasting routes for WebSocket authentication
 Broadcast::routes(['middleware' => ['auth', 'verified']]);
- 
+
+// WebSocket configuration
+Route::get('/websocket/config', function () {
+    return response()->json([
+        'pusher_key' => env('PUSHER_APP_KEY'),
+        'cluster' => env('PUSHER_APP_CLUSTER'),
+        'auth_endpoint' => '/api/broadcasting/auth',
+    ]);
+});
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/settings.php';
