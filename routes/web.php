@@ -5,7 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Middleware\UserActiveMiddleware;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\TransactionsController;
-
+use Illuminate\Support\Facades\Broadcast;
 
 Route::middleware(
     [
@@ -14,13 +14,12 @@ Route::middleware(
         UserActiveMiddleware::class,
     ]
 )
-->group(function () {
-    Route::get('/', [HomeController::class, 'index'])->name('home');
-    Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
-    Route::get('/transactions', [TransactionsController::class, 'getTransactions'])->name('transactions');
+    ->group(function () {
+        Route::get('/', [HomeController::class, 'index'])->name('home');
+        Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
 
-    Route::resource('banks', BankController::class);
-}); 
+        Route::resource('banks', BankController::class);
+    });
 
 Route::middleware(
     [
@@ -34,6 +33,10 @@ Route::middleware(
     Route::get('/search-wallets', [TransactionsController::class, 'searchWallets'])->name('wallets.search');
 });
 
+// Broadcasting routes for WebSocket authentication
+Broadcast::routes(['middleware' => ['auth', 'verified']]);
+ 
+
 require __DIR__ . '/auth.php';
-require __DIR__ . '/settings.php'; 
+require __DIR__ . '/settings.php';
 require __DIR__ . '/miniwallet.php';

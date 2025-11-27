@@ -10,8 +10,7 @@ import Dropdown from 'primevue/dropdown';
 import Checkbox from 'primevue/checkbox';
 import Divider from 'primevue/divider';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
-import InputNumber from 'primevue/inputnumber';
+import Toast from 'primevue/toast'; 
 import {
     Wallet2 as WalletIcon,
     CreditCard,

@@ -11,6 +11,7 @@ use App\Http\Controllers\Artifacts\ReadController;
 use App\Http\Controllers\Artifacts\UpdateController;
 use App\Http\Controllers\Artifacts\DeleteController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Events\Miniwallet\MoneyReceived;
 
 class TransactionsController extends Controller
 {
@@ -836,6 +837,16 @@ class TransactionsController extends Controller
                 'transaction_key' => $trxn_key,
                 'system_account_key' => $system_account->key
             ]);
+
+            $bcastData = [
+                'ref_number' => $ref_number,
+                'amount' => $transferAmount,
+                'sender_id' => $user->key,
+                'receiver_id' => $receiver_wallet->user_key,
+                'new_balance' => $newReceiverBalance,
+                'message' => "You received AED " . number_format($transferAmount, 2),
+            ];
+            event(new MoneyReceived($bcastData));
 
             return redirect()->route('mywallets')->with('success', 'Transfer completed successfully');
         } catch (\Illuminate\Validation\ValidationException $e) {

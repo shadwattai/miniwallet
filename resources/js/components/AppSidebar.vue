@@ -38,7 +38,7 @@ const userNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
     {
         title: 'Home',
-        href: "/miniwallet/dashboard",
+        href: dashboard(),
         icon: Home,
     },
     {
