@@ -4,6 +4,8 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { User as UserIcon, Activity, CreditCard, Settings } from 'lucide-vue-next';
+import { defineProps } from 'vue';
+import Chart from 'primevue/chart';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -14,8 +16,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const props = defineProps<{
     User?: any;
+    AccountBalance: number;
+    RecentTransactions: Array<{ description: string; amount: number; created_at: string }>;
+    TransactionStatistics?: Array<{ type: string; count: number; total_amount: number }>;
 }>();
 
+const chartData = {
+    labels: props.TransactionStatistics?.map(stat => stat.type) || [],
+    datasets: [
+        {
+            label: 'Transaction Count',
+            backgroundColor: ['#42A5F5', '#66BB6A', '#FFA726', '#26C6DA'],
+            data: props.TransactionStatistics?.map(stat => stat.count) || [],
+        },
+    ],
+};
+
+const chartOptions = {
+    responsive: true,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+    },
+};
 </script>
 
 <template>
@@ -36,7 +60,7 @@ const props = defineProps<{
                         <UserIcon class="h-8 w-8 text-blue-500" />
                         <div>
                             <p class="text-sm font-medium text-gray-500">Account Balance</p>
-                            <p class="text-lg font-bold text-gray-800">$1,250.00</p>
+                            <p class="text-lg font-bold text-gray-800">{{ Number(props.AccountBalance || 0).toFixed(2) }}</p>
                         </div>
                     </div>
                 </div>
@@ -45,7 +69,7 @@ const props = defineProps<{
                         <Activity class="h-8 w-8 text-green-500" />
                         <div>
                             <p class="text-sm font-medium text-gray-500">Recent Transactions</p>
-                            <p class="text-lg font-bold text-gray-800">15</p>
+                            <p class="text-lg font-bold text-gray-800">{{ props.RecentTransactions.length }}</p>
                         </div>
                     </div>
                 </div>
@@ -69,37 +93,21 @@ const props = defineProps<{
                 </div>
             </div>
 
-            <!-- Quick Actions Section -->
+            <!-- Transaction Statistics Chart -->
             <div class="rounded-lg bg-white p-6 shadow-md">
-                <h2 class="text-lg font-bold text-gray-800">Quick Actions</h2>
-                <div class="mt-4 flex gap-4">
-                    <button class="rounded-lg bg-blue-500 px-4 py-2 text-white shadow-md hover:bg-blue-600">
-                        Add Funds
-                    </button>
-                    <button class="rounded-lg bg-green-500 px-4 py-2 text-white shadow-md hover:bg-green-600">
-                        Transfer Money
-                    </button>
-                    <button class="rounded-lg bg-gray-500 px-4 py-2 text-white shadow-md hover:bg-gray-600">
-                        View Transactions
-                    </button>
-                </div>
+                <h2 class="text-lg font-bold text-gray-800">Transaction Statistics</h2>
+                <Chart type="bar" :data="chartData" :options="chartOptions" class="mt-4" />
             </div>
 
             <!-- Recent Activity Section -->
             <div class="rounded-lg bg-white p-6 shadow-md">
                 <h2 class="text-lg font-bold text-gray-800">Recent Activity</h2>
                 <ul class="mt-4 space-y-2">
-                    <li class="flex items-center justify-between">
-                        <span class="text-sm text-gray-600">Payment to John Doe</span>
-                        <span class="text-sm font-bold text-gray-800">-$50.00</span>
-                    </li>
-                    <li class="flex items-center justify-between">
-                        <span class="text-sm text-gray-600">Funds Added</span>
-                        <span class="text-sm font-bold text-gray-800">+$200.00</span>
-                    </li>
-                    <li class="flex items-center justify-between">
-                        <span class="text-sm text-gray-600">Subscription Payment</span>
-                        <span class="text-sm font-bold text-gray-800">-$15.00</span>
+                    <li v-for="transaction in props.RecentTransactions" :key="transaction.created_at" class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">{{ transaction.description }}</span>
+                        <span :class="transaction.amount > 0 ? 'text-green-500' : 'text-red-500'" class="text-sm font-bold">
+                            {{ transaction.amount > 0 ? '+' : '' }}${{ transaction.amount.toFixed(2) }}
+                        </span>
                     </li>
                 </ul>
             </div>

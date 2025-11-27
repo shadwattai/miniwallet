@@ -5,19 +5,27 @@ Miniwallet Web App (The Double-entry accounting system Version)
 - First steps
 1. composer install
 
+2. npm install
+
+3. npm run dev [build]
+
+- Database setup
+1. Create a database named miniwallet
+
 2. php artisan migrate
 
 3. php artisan db:seed
-- Will insert:
 
-## The root/admin user
+### Then login as
+- The root/admin user
 - email: root@miniwallet.com
 - password: masterpass
 
-## The initial/invisible account
+### The initial/invisible account
+- This is an invisible account that is created when a user is created or when a user Signs up.
 - Helps to DR and CR when we Deposit and Withdraw from Savings Accounts
 
-## List of banks
+### List of banks
 - An initial list of banks to maintain our savings accounts
 
 ## Tech stack
@@ -38,31 +46,40 @@ Controller classes are found in the Controllers/Artifacts directory and are call
 
 ## Operations
 
-1. [MANDATORY] 
+### 1. [MANDATORY] 
 - When User signs Up and logs in:
 - Going to My Wallets, they can create
 - (i) a savings account mapped to the bank (to allow deposits).
 - (ii) a digital wallet account that can transfer to other wallets(to allow transfers)
 - (iii) invisible maintenance account is automaticallt created when the user is created.
 
-2. Initial Deposit transaction
+### 2. Initial Deposit transaction
 - Make a deposit to the savings account
-this will credit the initial account(invisible) and debit the savings account 
+- this will credit the initial account(invisible) and debit the savings account 
 
-3. Withdraw transaction
+### 3. Withdraw transaction
 - Make a withdraw to the savings account
-this will credit the savings account and debit the initial account(invisible) thus reducing amount from the savings account
+- this will credit the savings account and debit the initial account(invisible) thus reducing amount from the savings account
 
-4. Topup transaction
+### 4. Topup transaction
 - Make a Topup to the digital wallet account
-this will credit the savings account and debit the WALLET account thus reducing amount from the savings account and increasing amounts to the WALLET account.
+- This will credit the savings account and debit the WALLET account thus reducing amount from the savings account and increasing amounts to the WALLET account.
 
-5. Transfer transaction
+### 5. Transfer transaction
 - If the Wallet account has money with amount bigger than minimum, the amount exceeding minimum can be transfered to any othe wallet account found in our miniwallet app. 
 
 - Transfers and transactions btn accounts can only happen between WALLET accounts of the same Currency.
 
 - Commission fee of 1.5% is applied to all transfer transactions. The root user savings account is credited with the commission fee.
+
+### 6. Transaction Details 
+- Click the more [...] button to see transaction details, including Credit and Debit entries.
+
+### 7. Transaction Statistics / Dashboard
+- View statistics of all transactions by type and total amount.
+- View the total balance of all wallet accounts.
+- View the last 5 transactions made by the user.
+ 
 
 ## Database structure 
 1. Core Application Tables
@@ -154,3 +171,5 @@ this will credit the savings account and debit the WALLET account thus reducing 
 ## WEB SOCKET
 - run command:
 - #php artisan queue:work --verbose
+
+
