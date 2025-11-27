@@ -17,6 +17,7 @@ Route::middleware(
 ->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::get('/transactions', [TransactionsController::class, 'getTransactions'])->name('transactions');
 
     Route::resource('banks', BankController::class);
 }); 

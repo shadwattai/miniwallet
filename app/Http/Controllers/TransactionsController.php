@@ -30,12 +30,41 @@ class TransactionsController extends Controller
 
     public function getTransactions()
     {
-        $transactions = [];
+        $user = Auth::user();
 
+        // Fetch transactions for the authenticated user with user and account information
+        $transactions = DB::table('wlt_transactions as t')
+            ->leftJoin('wlt_accounts as sender_acc', 't.sender_acct_key', '=', 'sender_acc.key')
+            ->leftJoin('wlt_accounts as receiver_acc', 't.receiver_acct_key', '=', 'receiver_acc.key')
+            ->leftJoin('users as sender_user', 'sender_acc.user_key', '=', 'sender_user.key')
+            ->leftJoin('users as receiver_user', 'receiver_acc.user_key', '=', 'receiver_user.key')
+            ->select(
+                't.key',
+                't.ref_number',
+                't.sender_acct_key',
+                't.receiver_acct_key',
+                't.description',
+                't.type',
+                't.amount',
+                't.commission_fee',
+                't.status',
+                't.created_at',
+                't.updated_at',
+                'sender_acc.account_name as sender_account_name',
+                'receiver_acc.account_name as receiver_account_name',
+                'sender_acc.currency',
+                'sender_user.name as sender_user_name',
+                'receiver_user.name as receiver_user_name'
+            )
+            ->where(function($query) use ($user) {
+                $query->where('sender_acc.user_key', $user->key)
+                      ->orWhere('receiver_acc.user_key', $user->key);
+            })
+            ->orderBy('t.created_at', 'desc')
+            ->get();
 
-
-        return Inertia::render('transactions/List', [
-            'User' => Auth::user(),
+        return Inertia::render('transactions/TransactionsList', [
+            'User' => $user,
             'transactions' => $transactions,
         ]);
     }

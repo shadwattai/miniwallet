@@ -1,30 +1,32 @@
-# miniwallet
-Miniwallet Web App (Double Entry System)
+## miniwallet
+Miniwallet Web App (The Double-entry accounting system Version)
 
 ## Installation guide
+- First steps
 1. composer install
 
 2. php artisan migrate
 
 3. php artisan db:seed
-Will insert:
+- Will insert:
 
-# The root/admin user
+## The root/admin user
 - email: root@miniwallet.com
 - password: masterpass
 
-# The initial/invisible account
+## The initial/invisible account
 - Helps to DR and CR when we Deposit and Withdraw from Savings Accounts
 
-# List of banks
+## List of banks
 - An initial list of banks to maintain our savings accounts
 
 ## Tech stack
-PHP 8.4, 
-Laravel 12.32, 
-PostgreSQL 17, 
-Vue 3 + Composition API, and
-PrimeVue CSS component library.
+- PHP 8.4, 
+- Laravel 12.32, 
+- PostgreSQL 17, 
+- InertiaJS for Vue 3,
+- Vue 3  (Composition API),
+- PrimeVue CSS component library.
 
 ## File structure
 Follows oppinionated structure from the Laravel starter kit
@@ -39,9 +41,9 @@ Controller classes are found in the Controllers/Artifacts directory and are call
 1. [MANDATORY] 
 - When User signs Up and logs in:
 - Going to My Wallets, they can create
-(i) a savings account mapped to the bank (to allow deposits).
-(ii) a digital wallet account that can transfer to other wallets(to allow transfers)
-(iii) invisible maintenance account is automaticallt created when the user is created.
+- (i) a savings account mapped to the bank (to allow deposits).
+- (ii) a digital wallet account that can transfer to other wallets(to allow transfers)
+- (iii) invisible maintenance account is automaticallt created when the user is created.
 
 2. Initial Deposit transaction
 - Make a deposit to the savings account
@@ -90,7 +92,7 @@ Use: Main transaction registry
 Purpose: Store high-level transaction information for all money movements
 Contains: Transaction metadata, sender/receiver accounts, amounts, status
 
-# Transaction Types:
+## Transaction Types:
 deposit - Money coming into savings from external source
 withdrawal - Money leaving savings to external destination
 topup - Transfer from savings to digital wallet
@@ -118,19 +120,19 @@ Key Fields: key (UUID), trxn_key, acct_key, entry, amount_dr, amount_cr
 - Password: masterpass
 - Role: Admin/Root user
 
-# Initial System Accounts
+## Initial System Accounts
 - Created automatically for each user
 - Type: initial
 - Purpose: Handle external money flows for deposits/withdrawals
 - Visibility: Hidden from users (system-only)
 
-# Bank Master Data
+## Bank Master Data
 - Pre-populated list of supported banks
 - Includes major banks with SWIFT codes and currencies
 - Used for creating savings accounts
 
 6. Data Integrity Features
-# Audit Trail
+## Audit Trail
 - All tables include: created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
 
 Tracks who made changes and when
@@ -139,11 +141,11 @@ Soft Deletes
 Records are marked as deleted, not physically removed
 Maintains transaction history and audit trail
 
-# Optimistic Locking
+## Optimistic Locking
 version fields prevent concurrent update conflicts
 Incremented on each record update
 
-# Balance Validation
+## Balance Validation
 Savings accounts: Minimum balance requirements (AED 1,000)
 Double-entry: Debits always equal credits
 Transaction atomicity: All-or-nothing updates

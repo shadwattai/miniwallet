@@ -30,7 +30,7 @@ const userNavItems: NavItem[] = [
     },
     {
         title: 'Transactions',
-        href: "/miniwallet/transactions",
+        href: "/api/transactions",
         icon: ListCheck,
     },
 ];
@@ -53,7 +53,7 @@ const adminNavItems: NavItem[] = [
     },
     {
         title: 'Transactions',
-        href: "/miniwallet/transactions",
+        href: "/api/transactions",
         icon: ListCheck,
     },
     {
