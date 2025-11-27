@@ -206,6 +206,9 @@ class TransactionsController extends Controller
                 return back()->withErrors(['general' => 'Failed to update wallet balance.']);
             }
 
+            // Record running balance in wlt_accounts_balances table
+            $this->recordRunningBalance($wallet->key, $trxn_key, $currentBalance, $depositAmount, $newBalance);
+
             Log::info('Money deposited successfully using double-entry accounting', [
                 'ref_number' => $ref_number,
                 'user_key' => $user->key,
@@ -374,6 +377,9 @@ class TransactionsController extends Controller
                 $this->deleteController->DeleteRow('wlt_transactions_details', $debit_detail_key);
                 return back()->withErrors(['general' => 'Failed to update wallet balance.']);
             }
+
+            // Record running balance in wlt_accounts_balances table
+            $this->recordRunningBalance($wallet->key, $trxn_key, $currentBalance, -$withdrawAmount, $newBalance);
 
             Log::info('Money withdrawn successfully using double-entry accounting', [
                 'ref_number' => $ref_number,
@@ -566,6 +572,10 @@ class TransactionsController extends Controller
                 return back()->withErrors(['general' => 'Failed to update account balances.']);
             }
 
+            // Record running balances
+            $this->recordRunningBalance($source_account->key, $trxn_key, $sourceCurrentBalance, -$topUpAmount, $newSourceBalance);
+            $this->recordRunningBalance($target_wallet->key, $trxn_key, $targetCurrentBalance, $topUpAmount, $newTargetBalance);
+
             Log::info('Wallet top up transfer completed successfully', [
                 'ref_number' => $ref_number,
                 'user_key' => $user->key,
@@ -713,6 +723,9 @@ class TransactionsController extends Controller
             $newSenderBalance = $senderCurrentBalance - $totalDebitAmount;
             $newReceiverBalance = $receiverCurrentBalance + $transferAmount;
 
+            //record running balances for sender and receiver in the wlt_accounts_balances table 
+            
+
             // Generate reference number
             $ref_number = 'TR' . strtoupper(uniqid()) . time();
 
@@ -811,6 +824,11 @@ class TransactionsController extends Controller
                 $this->deleteController->DeleteRow('wlt_transactions_details', $commission_detail_key);
                 return back()->withErrors(['general' => 'Failed to update wallet balances.']);
             }
+
+            // Record running balances
+            $this->recordRunningBalance($sender_wallet->key, $trxn_key, $senderCurrentBalance, -$totalDebitAmount, $newSenderBalance);
+            $this->recordRunningBalance($receiver_wallet->key, $trxn_key, $receiverCurrentBalance, $transferAmount, $newReceiverBalance);
+            $this->recordRunningBalance($system_account->key, $trxn_key, $system_account->balance, $commissionFee, $newSystemBalance);
 
             // Get receiver user info for logging
             $receiver_user = $this->readController->SearchRows('users', [
@@ -974,5 +992,23 @@ class TransactionsController extends Controller
 
             return response()->json(['error' => 'Failed to search wallets.'], 500);
         }
+    }
+
+    private function recordRunningBalance(string $accountKey, string $transactionKey, float $previousBalance, float $transactionAmount, float $newBalance): void
+    {
+        $user = Auth::user();
+
+        $balanceHistory = [
+            'acct_key' => $accountKey,
+            'trxn_key' => $transactionKey,
+            'prev_balance' => $previousBalance,
+            'trxn_amount' => $transactionAmount, // Positive for credit, negative for debit
+            'running_balance' => $newBalance,
+            'version' => 1,
+            'created_by' => $user->key,
+            'updated_by' => $user->key,
+        ];
+
+        $this->createController->CreateSingleRow('wlt_accounts_balances', $balanceHistory);
     }
 }
