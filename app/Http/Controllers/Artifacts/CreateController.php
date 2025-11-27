@@ -44,11 +44,12 @@ class CreateController extends Controller
         if (!$user) {
             throw new \Exception('User not authenticated');
         }
-
-        // For single tenant, simply check if user is authenticated and active
+ 
         if (!$user->status || $user->status !== 'active') {
             throw new \Exception('User account is not active');
         }
+
+        // some more logic for CRUD operations permision
 
         return true;
     }

@@ -714,12 +714,8 @@ const submitDepositForm = () => {
                             :loading="depositForm.processing"
                             :disabled="!depositAmount || parseFloat(depositAmount) <= 0"
                             class="flex-1 bg-green-500 hover:bg-green-600"
-                        >
-                            <DollarSign class="w-4 h-4 mr-2" />
-                            Deposit {{ selectedWalletForDeposit?.currency }} {{ parseFloat(depositAmount)?.toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }) || '0.00' }}
+                        > 
+                            Deposit
                         </Button>
                     </div>
                 </form>

@@ -10,17 +10,17 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
-{ 
+{
 
     /**
      * Seed the application's database.
      */
 
     public function run(): void
-    {  
-        DB::table('users')->truncate(); 
-        DB::table('wlt_banks')->truncate(); 
-        DB::table('wlt_accounts')->truncate(); 
+    {
+        DB::table('users')->truncate();
+        DB::table('wlt_banks')->truncate();
+        DB::table('wlt_accounts')->truncate();
 
         $masterpass = '$2y$12$LqW3PUWK8Z4We8MXTYnsJ.9sDN.GWfyWYRC9WAe4e5rhhNlP5UTwq';
         $systemRootKey = 'fadf94db-6d13-4328-a7ab-92ee2a1b5090';
@@ -37,96 +37,14 @@ class DatabaseSeeder extends Seeder
             'created_by' => $systemRootKey, // Self-created
         ]);
 
-        User::factory()->create([
-            'key' => '7d2200c9-1001-413b-a6c4-0e14978a7df4',
-            'name' => 'Lisa Wiliams',
-            'handle' => '@lisa.wiliams',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'lisa@miniwallet.com',
-            'phone' => '+255 752 555 665',
-            'role' => 'admin',
-            'created_by' => $systemRootKey,
-        ]); 
-        
-        User::factory()->create([
-            'key' => '5627f1ac-bda7-477d-ab76-5f4c134a4d39',
-            'name' => 'Ada Lovelace',
-            'handle' => '@ada.lovelace',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'ada@miniwallet.com',
-            'role' => 'user',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Linda Lopez',
-            'handle' => '@linda.lopez',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'linda@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Regina Caeli',
-            'handle' => '@regina.caeli',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'regina@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Abbie April',
-            'handle' => '@abbie.april',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'abbie.april@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Kemi Badenoch',
-            'handle' => '@kemi.badenoch',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'kemi@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Olivia Martin',
-            'handle' => '@olivia.martin',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'olivia@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory()->create([
-            'key' => Str::uuid(),
-            'name' => 'Juddie Wattai',
-            'handle' => '@juddie.wattai',
-            'password' => $masterpass,
-            'email_verified_at' => now(),
-            'email' => 'juddie@miniwallet.com',
-            'created_by' => $systemRootKey,
-        ]);
-
-        User::factory(10)->create([
-            'created_by' => $systemRootKey,
-            'status' => 'active',
-        ]); 
+        // User::factory(10)->create([
+        //     'created_by' => $systemRootKey,
+        //     'status' => 'active',
+        // ]); 
 
         // Seed Banks
         $this->seedBanks($systemRootKey);
-        
+
         // Seed Wallet Accounts
         $this->seedWalletAccounts($systemRootKey);
     }
@@ -382,7 +300,6 @@ class DatabaseSeeder extends Seeder
         foreach ($banks as $bank) {
             DB::table('wlt_banks')->insert($bank);
         }
-
     }
 
     /**
@@ -390,80 +307,28 @@ class DatabaseSeeder extends Seeder
      */
     private function seedWalletAccounts(string $systemRootKey): void
     {
-        $users = [
+        // Get bank keys for seeded banks
+        $bank_key = DB::table('wlt_banks')->pluck('key')->first();
 
-            'fadf94db-6d13-4328-a7ab-92ee2a1b5090', // System Root
-            '7d2200c9-1001-413b-a6c4-0e14978a7df4', // Lisa Williams
-            '5627f1ac-bda7-477d-ab76-5f4c134a4d39', // Ada Lovelace
+        $currency = 'AED';
+        $accountType = 'savings';
+
+        $account = [
+            'key' => Str::uuid(),
+            'user_key' => $systemRootKey,
+            'bank_key' => $bank_key,
+            'account_number' => '6401' . str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
+            'account_name' => $this->generateAccountName($accountType),
+            'account_type' => $accountType,
+            'currency' => $currency,
+            'balance' => 0,
+            'is_active' => rand(0, 10) > 1, // 90% chance of being active
+            'is_default' => true, // First account is default
+            'created_by' => $systemRootKey,
+            'updated_by' => $systemRootKey,
         ];
 
-        // Get bank keys for seeded banks
-        $bankKeys = DB::table('wlt_banks')->pluck('key')->toArray();
-
-        $accountTypes = ['wallet', 'savings', 'checking'];
-        $currencies = ['AED', 'USD', 'EUR'];
-
-        $accounts = [];
-
-        // Create accounts for specific users
-        foreach ($users as $userKey) {
-            // Create 2-3 accounts per user
-            $numberOfAccounts = rand(2, 3);
-            
-            for ($i = 0; $i < $numberOfAccounts; $i++) {
-                $bankKey = $bankKeys[array_rand($bankKeys)];
-                $accountType = $accountTypes[array_rand($accountTypes)];
-                $currency = $currencies[array_rand($currencies)];
-                
-                $accounts[] = [
-                    'key' => Str::uuid(),
-                    'user_key' => $userKey,
-                    'bank_key' => $bankKey,
-                    'account_number' => '6401'.str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
-                    'account_name' => $this->generateAccountName($accountType),
-                    'account_type' => $accountType,
-                    'currency' => $currency,
-                    'balance' => $this->generateBalance($accountType),
-                    'is_active' => rand(0, 10) > 1, // 90% chance of being active
-                    'is_default' => $i === 0, // First account is default
-                    'created_by' => $systemRootKey,
-                    'updated_by' => $systemRootKey,
-                ];
-            }
-        }
-
-        // Create a few more random accounts for other users
-        $otherUsers = DB::table('users')
-            ->whereNotIn('key', $users)
-            ->where('key', '!=', $systemRootKey)
-            ->limit(5)
-            ->pluck('key')
-            ->toArray();
-
-        foreach ($otherUsers as $userKey) {
-            $bankKey = $bankKeys[array_rand($bankKeys)];
-            $accountType = $accountTypes[array_rand($accountTypes)];
-            $currency = $currencies[array_rand($currencies)];
-            
-            $accounts[] = [
-                'key' => Str::uuid(),
-                'user_key' => $userKey,
-                'bank_key' => $bankKey,
-                'account_number' => '6501'.str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
-                'account_name' => $this->generateAccountName($accountType),
-                'account_type' => $accountType,
-                'currency' => $currency,
-                'balance' => $this->generateBalance($accountType),
-                'is_active' => rand(0, 10) > 1, // 90% chance of being active
-                'is_default' => true, // Only account, so it's default
-                'created_by' => $systemRootKey,
-                'updated_by' => $systemRootKey,
-            ];
-        }
-
-        foreach ($accounts as $account) {
-            DB::table('wlt_accounts')->insert($account);
-        }
+        DB::table('wlt_accounts')->insert($account);
     }
 
     /**
@@ -478,22 +343,5 @@ class DatabaseSeeder extends Seeder
         ];
 
         return $names[$accountType][array_rand($names[$accountType])];
-    }
-
-    /**
-     * Generate realistic balance based on account type
-     */
-    private function generateBalance(string $accountType): float
-    {
-        switch ($accountType) {
-            case 'wallet':
-                return rand(100, 5000) + (rand(0, 99) / 100); // 100 to 5000 with cents
-            case 'savings':
-                return rand(5000, 50000) + (rand(0, 99) / 100); // 5000 to 50000 with cents
-            case 'checking':
-                return rand(500, 15000) + (rand(0, 99) / 100); // 500 to 15000 with cents
-            default:
-                return rand(100, 1000) + (rand(0, 99) / 100);
-        }
     }
 }
