@@ -106,12 +106,12 @@ const countryOptions = [
 
 const currencyOptions = [
     { label: 'AED - UAE Dirham', value: 'AED' },
-    { label: 'USD - US Dollar', value: 'USD' },
-    { label: 'EUR - Euro', value: 'EUR' },
-    { label: 'GBP - British Pound', value: 'GBP' },
-    { label: 'SAR - Saudi Riyal', value: 'SAR' },
-    { label: 'INR - Indian Rupee', value: 'INR' },
-    { label: 'SGD - Singapore Dollar', value: 'SGD' }
+    // { label: 'USD - US Dollar', value: 'USD' },
+    // { label: 'EUR - Euro', value: 'EUR' },
+    // { label: 'GBP - British Pound', value: 'GBP' },
+    // { label: 'SAR - Saudi Riyal', value: 'SAR' },
+    // { label: 'INR - Indian Rupee', value: 'INR' },
+    // { label: 'SGD - Singapore Dollar', value: 'SGD' }
 ];
 
 const bankTypeOptions = [

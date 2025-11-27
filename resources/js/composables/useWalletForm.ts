@@ -32,16 +32,16 @@ export function useWalletForm(banks?: Bank[]) {
     // Currency mapping for display labels
     const currencyLabels: Record<string, string> = {
         'AED': 'AED - UAE Dirham',
-        'USD': 'USD - US Dollar',
-        'EUR': 'EUR - Euro',
-        'GBP': 'GBP - British Pound',
-        'SAR': 'SAR - Saudi Riyal',
-        'INR': 'INR - Indian Rupee',
-        'SGD': 'SGD - Singapore Dollar',
-        'JPY': 'JPY - Japanese Yen',
-        'CHF': 'CHF - Swiss Franc',
-        'CAD': 'CAD - Canadian Dollar',
-        'AUD': 'AUD - Australian Dollar'
+        // 'USD': 'USD - US Dollar',
+        // 'EUR': 'EUR - Euro',
+        // 'GBP': 'GBP - British Pound',
+        // 'SAR': 'SAR - Saudi Riyal',
+        // 'INR': 'INR - Indian Rupee',
+        // 'SGD': 'SGD - Singapore Dollar',
+        // 'JPY': 'JPY - Japanese Yen',
+        // 'CHF': 'CHF - Swiss Franc',
+        // 'CAD': 'CAD - Canadian Dollar',
+        // 'AUD': 'AUD - Australian Dollar'
     };
 
     // Form setup

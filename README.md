@@ -56,7 +56,9 @@ this will credit the savings account and debit the initial account(invisible) th
 this will credit the savings account and debit the WALLET account thus reducing amount from the savings account and increasing amounts to the WALLET account.
 
 5. Transfer transaction
-- If the Wallet account has money with amount bigger than minimum, the amount exceeding minimum can be transfered to any othe wallet account found in our miniwallet app.
+- If the Wallet account has money with amount bigger than minimum, the amount exceeding minimum can be transfered to any othe wallet account found in our miniwallet app. 
+
+- Transfers and transactions btn accounts can only happen between WALLET accounts of the same Currency.
 
 
 ## Database structure 

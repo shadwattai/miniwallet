@@ -263,8 +263,8 @@ class TransactionsController extends Controller
                 return back()->withErrors(['amount' => 'Insufficient funds for withdrawal.']);
             }
 
-            // Check minimum balance requirement (e.g., AED 1,000 must remain)
-            $minBalance = 1000; // Minimum balance requirement
+            // Check minimum balance requirement (e.g., AED 100 must remain)
+            $minBalance = 100; // Minimum balance requirement
             if ($newBalance < $minBalance) {
                 return back()->withErrors(['amount' => "Withdrawal would violate minimum balance requirement. Minimum {$wallet->currency} {$minBalance} must remain in account."]);
             }
@@ -442,11 +442,11 @@ class TransactionsController extends Controller
             $targetCurrentBalance = floatval($target_wallet->balance);
 
             // Check if source account has sufficient balance (including minimum balance requirement)
-            $minBalance = 1000; // AED 1,000 minimum balance
+            $minBalance = 100; // AED 100 minimum balance
             $availableBalance = $sourceCurrentBalance - $minBalance;
 
             if ($availableBalance < $topUpAmount) {
-                return back()->withErrors(['amount' => "Insufficient funds. Available for transfer: {$source_account->currency} " . number_format($availableBalance, 2) . " (AED 1,000 minimum must remain)."]);
+                return back()->withErrors(['amount' => "Insufficient funds. Available for transfer: {$source_account->currency} " . number_format($availableBalance, 2) . " (AED 100 minimum must remain)."]);
             }
 
             // Calculate new balances
@@ -595,18 +595,18 @@ class TransactionsController extends Controller
             ]);
 
             if (empty($sender_wallets)) {
-                return response()->json(['errors' => ['general' => 'Sender wallet not found or you do not have permission to use this wallet.']], 404);
+                return back()->withErrors(['general' => 'Sender wallet not found or you do not have permission to use this wallet.']);
             }
 
             $sender_wallet = $sender_wallets[0];
 
             // Check if sender wallet is active and is a digital wallet
             if (!$sender_wallet->is_active) {
-                return response()->json(['errors' => ['general' => 'Cannot transfer from an inactive wallet.']], 400);
+                return back()->withErrors(['general' => 'Cannot transfer from an inactive wallet.']);
             }
 
             if ($sender_wallet->account_type !== 'wallet') {
-                return response()->json(['errors' => ['general' => 'Transfers can only be made from digital wallet accounts.']], 400);
+                return back()->withErrors(['general' => 'Transfers can only be made from digital wallet accounts.']);
             }
 
             // Find receiver wallet (can belong to any user)
@@ -615,28 +615,28 @@ class TransactionsController extends Controller
             ]);
 
             if (empty($receiver_wallets)) {
-                return response()->json(['errors' => ['general' => 'Receiver wallet not found.']], 404);
+                return back()->withErrors(['general' => 'Receiver wallet not found.']);
             }
 
             $receiver_wallet = $receiver_wallets[0];
 
             // Check if receiver wallet is active and is a digital wallet
             if (!$receiver_wallet->is_active) {
-                return response()->json(['errors' => ['general' => 'Cannot transfer to an inactive wallet.']], 400);
+                return back()->withErrors(['general' => 'Cannot transfer to an inactive wallet.']);
             }
 
             if ($receiver_wallet->account_type !== 'wallet') {
-                return response()->json(['errors' => ['general' => 'Transfers can only be made to digital wallet accounts.']], 400);
+                return back()->withErrors(['general' => 'Transfers can only be made to digital wallet accounts.']);
             }
 
             // Cannot transfer to same wallet
             if ($sender_wallet->key === $receiver_wallet->key) {
-                return response()->json(['errors' => ['general' => 'Cannot transfer to the same wallet.']], 400);
+                return back()->withErrors(['general' => 'Cannot transfer to the same wallet.']);
             }
 
             // Check currency matching
             if ($sender_wallet->currency !== $receiver_wallet->currency) {
-                return response()->json(['errors' => ['general' => 'Currency mismatch between sender and receiver wallets.']], 400);
+                return back()->withErrors(['general' => 'Currency mismatch between sender and receiver wallets.']);
             }
 
             $transferAmount = floatval($validated['amount']);
@@ -649,12 +649,10 @@ class TransactionsController extends Controller
 
             // Check if sender has sufficient balance for transfer + commission
             if ($senderCurrentBalance < $totalDebitAmount) {
-                return response()->json([
-                    'errors' => [
-                        'amount' => 'Insufficient funds. Required: ' . $sender_wallet->currency . ' ' . number_format($totalDebitAmount, 2) . 
-                                  ' (Transfer: ' . number_format($transferAmount, 2) . ' + Commission: ' . number_format($commissionFee, 2) . ').'
-                    ]
-                ], 422);
+                return back()->withErrors([
+                    'amount' => 'Insufficient funds. Required: ' . $sender_wallet->currency . ' ' . number_format($totalDebitAmount, 2) . 
+                              ' (Transfer: ' . number_format($transferAmount, 2) . ' + Commission: ' . number_format($commissionFee, 2) . ').'
+                ]);
             }
 
             // Find system root user's initial account for commission
@@ -663,7 +661,7 @@ class TransactionsController extends Controller
             ]);
 
             if (empty($root_user)) {
-                return response()->json(['errors' => ['general' => 'System root account not found.']], 500);
+                return back()->withErrors(['general' => 'System root account not found.']);
             }
 
             $system_accounts = $this->readController->SearchRows('wlt_accounts', [
@@ -673,7 +671,7 @@ class TransactionsController extends Controller
             ]);
 
             if (empty($system_accounts)) {
-                return response()->json(['errors' => ['general' => 'System commission account not found.']], 500);
+                return back()->withErrors(['general' => 'System commission account not found.']);
             }
 
             $system_account = $system_accounts[0];
@@ -701,7 +699,7 @@ class TransactionsController extends Controller
             $trxn_key = $this->createController->CreateSingleRow('wlt_transactions', $transactionData);
 
             if (empty($trxn_key)) {
-                return response()->json(['errors' => ['general' => 'Failed to create transaction record.']], 500);
+                return back()->withErrors(['general' => 'Failed to create transaction record.']);
             }
 
             // 2. Create transaction details (3 entries for transfer with commission)
@@ -748,7 +746,7 @@ class TransactionsController extends Controller
             if (!$sender_detail_key || !$receiver_detail_key || !$commission_detail_key) {
                 // Rollback transaction if detail creation fails
                 $this->deleteController->DeleteRow('wlt_transactions', $trxn_key);
-                return response()->json(['errors' => ['general' => 'Failed to create transaction details.']], 500);
+                return back()->withErrors(['general' => 'Failed to create transaction details.']);
             }
 
             // 3. Update wallet balances
@@ -771,7 +769,7 @@ class TransactionsController extends Controller
                 $this->deleteController->DeleteRow('wlt_transactions_details', $sender_detail_key);
                 $this->deleteController->DeleteRow('wlt_transactions_details', $receiver_detail_key);
                 $this->deleteController->DeleteRow('wlt_transactions_details', $commission_detail_key);
-                return response()->json(['errors' => ['general' => 'Failed to update wallet balances.']], 500);
+                return back()->withErrors(['general' => 'Failed to update wallet balances.']);
             }
 
             // Get receiver user info for logging
@@ -801,23 +799,10 @@ class TransactionsController extends Controller
                 'system_account_key' => $system_account->key
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Transfer completed successfully',
-                'data' => [
-                    'ref_number' => $ref_number,
-                    'transfer_amount' => $transferAmount,
-                    'commission_fee' => $commissionFee,
-                    'total_debited' => $totalDebitAmount,
-                    'currency' => $sender_wallet->currency,
-                    'sender_new_balance' => $newSenderBalance,
-                    'receiver_wallet_name' => $receiver_wallet->account_name,
-                    'receiver_user_name' => $receiver_user->name ?? 'Unknown User'
-                ]
-            ]);
+            return redirect()->route('mywallets')->with('success', 'Transfer completed successfully');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
+            return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             Log::error('Failed to process wallet transfer', [
                 'error' => $e->getMessage(),
@@ -825,7 +810,7 @@ class TransactionsController extends Controller
                 'user_key' => Auth::user()->key ?? 'unknown'
             ]);
 
-            return response()->json(['errors' => ['general' => 'Failed to process transfer. Please try again.']], 500);
+            return back()->withErrors(['general' => 'Failed to process transfer. Please try again.'])->withInput();
         }
     }
 
@@ -842,16 +827,65 @@ class TransactionsController extends Controller
             $excludeWallet = $validated['exclude_wallet'] ?? null;
             $currency = $validated['currency'] ?? null;
 
-            // Search active wallet accounts with user information
-            $wallets = DB::table('wlt_accounts')
+            // First, search for users by name, email, or handle
+            $users = DB::table('users')
+                ->select('key', 'name', 'email', 'handle')
+                ->where('status', 'active')
+                ->whereNull('deleted_at')
+                ->where(function($q) use ($query) {
+                    $q->where('name', 'like', "%{$query}%")
+                      ->orWhere('email', 'like', "%{$query}%")
+                      ->orWhere('handle', 'like', "%{$query}%");
+                })
+                ->limit(10) // Limit users to avoid too many results
+                ->get();
+
+            $wallets = collect();
+
+            // For each matching user, get their wallet accounts
+            foreach ($users as $user) {
+                $userWallets = DB::table('wlt_accounts')
+                    ->select(
+                        'key',
+                        'user_key',
+                        'account_name', 
+                        'account_number',
+                        'currency',
+                        'balance'
+                    )
+                    ->where('user_key', $user->key)
+                    ->where('account_type', 'wallet')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')
+                    ->when($excludeWallet, function($q, $exclude) {
+                        return $q->where('key', '!=', $exclude);
+                    })
+                    ->when($currency, function($q, $curr) {
+                        return $q->where('currency', $curr);
+                    })
+                    ->get()
+                    ->map(function($wallet) use ($user) {
+                        $wallet->user_name = $user->name;
+                        $wallet->user_email = $user->email;
+                        $wallet->user_handle = $user->handle;
+                        return $wallet;
+                    });
+
+                $wallets = $wallets->concat($userWallets);
+            }
+
+            // Also search directly by account name or number for better coverage
+            $directWallets = DB::table('wlt_accounts')
                 ->join('users', 'wlt_accounts.user_key', '=', 'users.key')
                 ->select(
                     'wlt_accounts.key',
+                    'wlt_accounts.user_key',
                     'wlt_accounts.account_name', 
                     'wlt_accounts.account_number',
                     'wlt_accounts.currency',
                     'wlt_accounts.balance',
                     'users.name as user_name',
+                    'users.email as user_email',
                     'users.handle as user_handle'
                 )
                 ->where('wlt_accounts.account_type', 'wallet')
@@ -861,9 +895,7 @@ class TransactionsController extends Controller
                 ->whereNull('users.deleted_at')
                 ->where(function($q) use ($query) {
                     $q->where('wlt_accounts.account_name', 'like', "%{$query}%")
-                      ->orWhere('wlt_accounts.account_number', 'like', "%{$query}%")
-                      ->orWhere('users.name', 'like', "%{$query}%")
-                      ->orWhere('users.handle', 'like', "%{$query}%");
+                      ->orWhere('wlt_accounts.account_number', 'like', "%{$query}%");
                 })
                 ->when($excludeWallet, function($q, $exclude) {
                     return $q->where('wlt_accounts.key', '!=', $exclude);
@@ -871,13 +903,17 @@ class TransactionsController extends Controller
                 ->when($currency, function($q, $curr) {
                     return $q->where('wlt_accounts.currency', $curr);
                 })
-                ->orderBy('users.name')
-                ->limit(20)
                 ->get();
 
+            // Merge and remove duplicates
+            $allWallets = $wallets->concat($directWallets)
+                ->unique('key')
+                ->take(20) // Limit final results
+                ->values();
+
             return response()->json([
-                'wallets' => $wallets,
-                'total' => $wallets->count()
+                'wallets' => $allWallets,
+                'total' => $allWallets->count()
             ]);
 
         } catch (\Exception $e) {

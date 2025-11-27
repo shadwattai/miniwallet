@@ -243,6 +243,29 @@ const maxTransferAmount = computed(() => {
     return balance / (1 + commissionRate);
 });
 
+// Group search results by user
+const groupedSearchResults = computed(() => {
+    if (!searchResults.value || searchResults.value.length === 0) return [];
+    
+    // Group wallets by user
+    const userGroups = {};
+    
+    searchResults.value.forEach(wallet => {
+        if (!userGroups[wallet.user_key]) {
+            userGroups[wallet.user_key] = {
+                user_key: wallet.user_key,
+                user_name: wallet.user_name,
+                user_email: wallet.user_email,
+                user_handle: wallet.user_handle,
+                wallets: []
+            };
+        }
+        userGroups[wallet.user_key].wallets.push(wallet);
+    });
+    
+    return Object.values(userGroups);
+});
+
 const inactiveWallets = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return [];
     return props.wallets.filter(wallet => !wallet.is_active);
@@ -1282,39 +1305,61 @@ const submitTransferForm = () => {
                         <div class="relative">
                             <InputText
                                 v-model="walletSearchQuery"
-                                placeholder="Search by account name, number, or owner name"
+                                placeholder="Search users by name, email, or @username"
                                 class="w-full pr-10"
                                 :class="{ 'p-invalid': transferForm.errors.receiver_wallet_key }"
                             />
                             <Search class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         </div>
                         <small v-if="transferForm.errors.receiver_wallet_key" class="text-red-500">{{ transferForm.errors.receiver_wallet_key }}</small>
-                        <small v-else class="text-gray-500">Start typing to search for wallet accounts</small>
+                        <small v-else class="text-gray-500">Search for users by name, email, @username, or account details</small>
                     </div>
 
-                    <!-- Search Results -->
-                    <div v-if="walletSearchQuery && searchResults.length > 0" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Search Results with User Grouping -->
+                    <div v-if="walletSearchQuery && searchResults.length > 0" class="space-y-4 max-h-80 overflow-y-auto">
                         <div class="text-sm font-medium text-gray-700 mb-2">
-                            Search Results ({{ searchResults.length }} found)
+                            Search Results ({{ searchResults.length }} wallet{{ searchResults.length > 1 ? 's' : '' }} found)
                         </div>
-                        <div 
-                            v-for="wallet in searchResults" 
-                            :key="wallet.key"
-                            @click="selectReceiverWallet(wallet)"
-                            class="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                            :class="{ 'border-orange-500 bg-orange-50': selectedReceiverWallet === wallet.key }"
-                        >
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <div class="font-medium text-gray-800">{{ wallet.account_name }}</div>
-                                    <div class="text-sm text-gray-600">{{ wallet.account_number }}</div>
-                                    <div class="text-sm text-orange-600">Owner: {{ wallet.user_name }}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm font-medium text-green-600">
-                                        {{ wallet.currency }}
+                        
+                        <!-- Group results by user -->
+                        <div v-for="userGroup in groupedSearchResults" :key="userGroup.user_key" class="space-y-2">
+                            <!-- User Header -->
+                            <div class="bg-gray-100 px-3 py-2 rounded-lg border-l-4 border-blue-500">
+                                <div class="flex items-center gap-2">
+                                    <User class="w-4 h-4 text-blue-600" />
+                                    <div>
+                                        <div class="font-medium text-gray-800">{{ userGroup.user_name }}</div>
+                                        <div class="text-xs text-gray-500">{{ userGroup.user_email }} • @{{ userGroup.user_handle }}</div>
                                     </div>
-                                    <div class="text-xs text-gray-500">{{ wallet.currency }} Wallet</div>
+                                </div>
+                            </div>
+                            
+                            <!-- User's Wallets -->
+                            <div class="ml-4 space-y-1">
+                                <div 
+                                    v-for="wallet in userGroup.wallets" 
+                                    :key="wallet.key"
+                                    @click="selectReceiverWallet(wallet)"
+                                    class="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white"
+                                    :class="{ 'border-orange-500 bg-orange-50 ring-2 ring-orange-200': selectedReceiverWallet === wallet.key }"
+                                >
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-1.5 bg-purple-100 rounded-lg">
+                                                <WalletIcon class="w-4 h-4 text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-gray-800">{{ wallet.account_name }}</div>
+                                                <div class="text-sm text-gray-600 font-mono">{{ wallet.account_number }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-sm font-medium text-green-600">
+                                                {{ wallet.currency }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">Digital Wallet</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1322,10 +1367,17 @@ const submitTransferForm = () => {
 
                     <!-- No Results -->
                     <div v-else-if="walletSearchQuery && !isSearchingWallets && searchResults.length === 0" 
-                         class="p-4 text-center text-gray-500 border border-gray-200 rounded-lg">
-                        <Search class="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                        <p>No wallet accounts found matching "{{ walletSearchQuery }}"</p>
-                        <small>Try searching by account name, number, or owner name</small>
+                         class="p-6 text-center text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
+                        <Search class="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                        <h4 class="font-medium text-gray-800 mb-1">No users or wallets found</h4>
+                        <p class="text-sm">No results for "{{ walletSearchQuery }}"</p>
+                        <div class="mt-3 text-xs text-gray-400 space-y-1">
+                            <div>Try searching by:</div>
+                            <div>• User name (e.g., "Karen Smith")</div>
+                            <div>• Email address (e.g., "karen@email.com")</div>
+                            <div>• Username (e.g., "@karen")</div>
+                            <div>• Account name or number</div>
+                        </div>
                     </div>
 
                     <!-- Loading State -->
