@@ -3,8 +3,8 @@
 namespace App\Events\Miniwallet;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -30,10 +30,11 @@ class MoneyReceived implements ShouldBroadcast
     }
 
     public function broadcastOn(): array
-    {
+    { 
+
         return [
+            new Channel('user.' . $this->receiverId),
             new PrivateChannel('user.' . $this->receiverId),
-            new PrivateChannel('wallet.' . $this->receiverId),
         ];
     }
 
@@ -44,12 +45,14 @@ class MoneyReceived implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        return [
+        $withData = [
             'ref_number' => $this->ref_number,
             'receiver_id' => $this->receiverId,
             'sender_id' => $this->senderId,
             'amount' => number_format($this->amount, 2),
             'new_balance' => number_format($this->newBalance, 2),
         ];
+
+        return $withData;
     }
 }

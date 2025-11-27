@@ -31,19 +31,21 @@ Route::middleware(
     Route::post('/transactions', [TransactionsController::class, 'transferMoney'])->name('wallets.transfer');
     Route::get('/transactions', [TransactionsController::class, 'getTransactions'])->name('wallets.transactions');
     Route::get('/search-wallets', [TransactionsController::class, 'searchWallets'])->name('wallets.search');
+
+    // Broadcasting routes for WebSocket authentication
+    Broadcast::routes(['middleware' => ['auth', 'verified']]);
+
+    // WebSocket configuration
+    Route::get('/websocket/config', function () {
+        return response()->json([
+            'pusher_key' => env('PUSHER_APP_KEY'),
+            'cluster' => env('PUSHER_APP_CLUSTER'),
+            'auth_endpoint' => '/api/broadcasting/auth',
+        ]);
+    });
 });
 
-// Broadcasting routes for WebSocket authentication
-Broadcast::routes(['middleware' => ['auth', 'verified']]);
 
-// WebSocket configuration
-Route::get('/websocket/config', function () {
-    return response()->json([
-        'pusher_key' => env('PUSHER_APP_KEY'),
-        'cluster' => env('PUSHER_APP_CLUSTER'),
-        'auth_endpoint' => '/api/broadcasting/auth',
-    ]);
-});
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/settings.php';

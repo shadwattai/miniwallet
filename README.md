@@ -149,3 +149,8 @@ this will credit the savings account and debit the WALLET account thus reducing 
 - Savings accounts: Minimum balance requirements (AED 1,000)
 - Double-entry: Debits always equal credits
 - Transaction atomicity: All-or-nothing updates
+
+
+## WEB SOCKET
+- run command:
+- #php artisan queue:work --verbose

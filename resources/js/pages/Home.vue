@@ -31,7 +31,7 @@ const props = defineProps<{
 
             <!-- Stats Section -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-lg bg-white p-4 shadow-md">
+                <div class="rounded-lg bg-gradient-to-r from-blue-100 to-blue-50 p-4 shadow-md border border-blue-200">
                     <div class="flex items-center gap-4">
                         <UserIcon class="h-8 w-8 text-blue-500" />
                         <div>
@@ -40,7 +40,7 @@ const props = defineProps<{
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-white p-4 shadow-md">
+                <div class="rounded-lg bg-gradient-to-r from-green-100 to-green-50 p-4 shadow-md border border-green-200">
                     <div class="flex items-center gap-4">
                         <Activity class="h-8 w-8 text-green-500" />
                         <div>
@@ -49,7 +49,7 @@ const props = defineProps<{
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-white p-4 shadow-md">
+                <div class="rounded-lg bg-gradient-to-r from-purple-100 to-purple-50 p-4 shadow-md border border-purple-200">
                     <div class="flex items-center gap-4">
                         <CreditCard class="h-8 w-8 text-purple-500" />
                         <div>
@@ -58,7 +58,7 @@ const props = defineProps<{
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-white p-4 shadow-md">
+                <div class="rounded-lg bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 shadow-md border border-yellow-200">
                     <div class="flex items-center gap-4">
                         <Settings class="h-8 w-8 text-yellow-500" />
                         <div>

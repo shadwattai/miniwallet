@@ -11,6 +11,7 @@ use App\Http\Controllers\Artifacts\ReadController;
 use App\Http\Controllers\Artifacts\UpdateController;
 use App\Http\Controllers\Artifacts\DeleteController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Events\Miniwallet\MoneySent;
 use App\Events\Miniwallet\MoneyReceived;
 
 class TransactionsController extends Controller
@@ -846,6 +847,8 @@ class TransactionsController extends Controller
                 'new_balance' => $newReceiverBalance,
                 'message' => "You received AED " . number_format($transferAmount, 2),
             ];
+
+            event(new MoneySent($bcastData));
             event(new MoneyReceived($bcastData));
 
             return redirect()->route('mywallets')->with('success', 'Transfer completed successfully');
