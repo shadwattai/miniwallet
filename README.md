@@ -173,3 +173,4 @@ Controller classes are found in the Controllers/Artifacts directory and are call
 - #php artisan queue:work --verbose
 
 
+- For more details, read the DOCUMENTATION.md file.

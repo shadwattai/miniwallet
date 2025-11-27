@@ -186,4 +186,98 @@ Miniwallet is a web-based financial application designed to manage digital walle
 
 ---
 
-For more details, refer to the README.md or contact the development team.
+## Balance Calculation Techniques
+
+### 1. **Pre-Stored Balances**
+- **Description**: Balances are stored directly in the `wlt_accounts` table and updated during every transaction. This ensures fast reads for real-time balance display.
+- **Use Case**: Ideal for high-traffic systems where performance is critical.
+- **Advantages**:
+  - Fast and efficient for real-time balance queries.
+  - Reduces computational overhead during balance retrieval.
+- **Disadvantages**:
+  - Risk of discrepancies if updates fail or are not atomic.
+  - Requires reconciliation to ensure data integrity.
+
+### 2. **Dynamic Balance Calculation**
+- **Description**: Balances are calculated dynamically by summing up all debit and credit entries in the `wlt_transactions_details` table for a specific account.
+- **Use Case**: Suitable for auditing, reconciliation, and historical reporting.
+- **Advantages**:
+  - Ensures data integrity by deriving balances directly from transaction history.
+  - Fully traceable and auditable.
+- **Disadvantages**:
+  - Computationally expensive for accounts with a large number of transactions.
+  - Slower performance for real-time balance queries.
+
+**Example Query**:
+```sql
+SELECT 
+    SUM(amount_cr) - SUM(amount_dr) AS balance
+FROM 
+    wlt_transactions_details
+WHERE 
+    acct_key = :accountKey;
+```
+
+### 3. **Hybrid Approach**
+- **Description**: Combines pre-stored balances with dynamic calculations. Balances are stored in the `wlt_accounts` table for real-time performance, while dynamic calculations are used for reconciliation and auditing.
+- **Use Case**: Ideal for systems requiring both performance and resiliency.
+- **Advantages**:
+  - Provides fast reads for real-time use cases.
+  - Ensures resiliency by allowing balances to be reconstructed dynamically.
+- **Disadvantages**:
+  - Requires periodic reconciliation to ensure consistency between stored and calculated balances.
+
+### 4. **Balance Snapshots**
+- **Description**: Periodic snapshots of account balances are stored in a separate table (e.g., `wlt_account_snapshots`). These snapshots are used as a starting point for dynamic calculations.
+- **Use Case**: Suitable for historical reporting and systems with high transaction volumes.
+- **Advantages**:
+  - Reduces the computational overhead of dynamic calculations.
+  - Efficient for querying balances at specific points in time.
+- **Disadvantages**:
+  - Requires additional storage for snapshots.
+  - Snapshots must be maintained and updated periodically.
+
+**Snapshot Table Example**:
+```sql
+CREATE TABLE wlt_account_snapshots (
+    acct_key UUID,
+    balance DECIMAL(26, 8),
+    snapshot_date DATE,
+    PRIMARY KEY (acct_key, snapshot_date)
+);
+```
+
+### 5. **Reconciliation Process**
+- **Description**: Periodically compare pre-stored balances with dynamically calculated balances to detect and fix discrepancies.
+- **Use Case**: Ensures data integrity in systems using pre-stored balances.
+- **Advantages**:
+  - Identifies and resolves inconsistencies.
+  - Improves system reliability.
+- **Disadvantages**:
+  - Requires additional processing time for reconciliation.
+
+**Reconciliation Example**:
+```php
+public function reconcileBalances(): void
+{
+    $accounts = DB::table('wlt_accounts')->get();
+
+    foreach ($accounts as $account) {
+        $dynamicBalance = $this->calculateDynamicBalance($account->key);
+
+        if (abs($account->balance - $dynamicBalance) > 0.01) { // Allow small rounding differences
+            Log::warning('Balance discrepancy detected', [
+                'account_key' => $account->key,
+                'stored_balance' => $account->balance,
+                'calculated_balance' => $dynamicBalance,
+            ]);
+
+            // Optionally, update the stored balance to match the calculated balance
+            DB::table('wlt_accounts')
+                ->where('key', $account->key)
+                ->update(['balance' => $dynamicBalance]);
+        }
+    }
+}
+```
+````
