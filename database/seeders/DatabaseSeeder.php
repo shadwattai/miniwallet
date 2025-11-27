@@ -35,13 +35,8 @@ class DatabaseSeeder extends Seeder
             'phone' => '+255 786 555 665',
             'role' => 'admin',
             'created_by' => $systemRootKey, // Self-created
-        ]);
-
-        // User::factory(10)->create([
-        //     'created_by' => $systemRootKey,
-        //     'status' => 'active',
-        // ]); 
-
+        ]); 
+        
         // Seed Banks
         $this->seedBanks($systemRootKey);
 
@@ -174,31 +169,7 @@ class DatabaseSeeder extends Seeder
                 'notes' => 'Oldest private bank in the UAE',
                 'created_by' => $systemRootKey,
                 'updated_by' => $systemRootKey,
-            ],
-            [
-                'key' => Str::uuid(),
-                'bank_name' => 'RAK Bank',
-                'bank_code' => 'RAKB001',
-                'bank_logo' => 'rak.png',
-                'swift_code' => 'NRAKAEAK',
-                'country_code' => 'UAE',
-                'bank_type' => 'commercial',
-                'address' => 'RAK Bank Building, Al Qusais Road, Dubai, UAE',
-                'phone' => '+971-4-2130000',
-                'email' => 'customercare@rakbank.ae',
-                'website' => 'https://www.rakbank.ae',
-                'is_active' => true,
-                'supports_transfers' => true,
-                'supports_deposits' => true,
-                'supports_withdrawals' => true,
-                'min_balance' => 1000.00,
-                'max_balance' => 20000000.00,
-                'daily_transfer_limit' => 600000.00,
-                'supported_currencies' => json_encode(['AED', 'USD', 'EUR']),
-                'notes' => 'Dynamic and innovative retail bank',
-                'created_by' => $systemRootKey,
-                'updated_by' => $systemRootKey,
-            ],
+            ], 
             [
                 'key' => Str::uuid(),
                 'bank_name' => 'Sharjah Islamic Bank',
@@ -222,31 +193,7 @@ class DatabaseSeeder extends Seeder
                 'notes' => 'Leading Islamic bank in Sharjah',
                 'created_by' => $systemRootKey,
                 'updated_by' => $systemRootKey,
-            ],
-            [
-                'key' => Str::uuid(),
-                'bank_name' => 'Standard Chartered Bank',
-                'bank_code' => 'SCBL001',
-                'bank_logo' => 'sc.png',
-                'swift_code' => 'SCBLAEAD',
-                'country_code' => 'UAE',
-                'bank_type' => 'commercial',
-                'address' => 'Standard Chartered Building, Emirates Towers, Dubai, UAE',
-                'phone' => '+971-4-5083900',
-                'email' => 'uae.service@sc.com',
-                'website' => 'https://www.sc.com/ae',
-                'is_active' => true,
-                'supports_transfers' => true,
-                'supports_deposits' => true,
-                'supports_withdrawals' => true,
-                'min_balance' => 5000.00,
-                'max_balance' => 80000000.00,
-                'daily_transfer_limit' => 2500000.00,
-                'supported_currencies' => json_encode(['AED', 'USD', 'EUR', 'GBP', 'JPY', 'CHF']),
-                'notes' => 'International bank with strong presence in UAE',
-                'created_by' => $systemRootKey,
-                'updated_by' => $systemRootKey,
-            ],
+            ], 
             [
                 'key' => Str::uuid(),
                 'bank_name' => 'HSBC Bank Middle East',
@@ -318,30 +265,17 @@ class DatabaseSeeder extends Seeder
             'user_key' => $systemRootKey,
             'bank_key' => $bank_key,
             'account_number' => '6401' . str_pad(rand(100000, 999999), 8, '0', STR_PAD_LEFT) . rand(10, 99),
-            'account_name' => $this->generateAccountName($accountType),
-            'account_type' => $accountType,
+            'account_name' => 'Bank Account',
+            'account_type' => 'initial',
             'currency' => $currency,
-            'balance' => 0,
-            'is_active' => rand(0, 10) > 1, // 90% chance of being active
+            'balance' => 0, 
             'is_default' => true, // First account is default
+            'is_active' => true, // First account is active
             'created_by' => $systemRootKey,
             'updated_by' => $systemRootKey,
         ];
 
         DB::table('wlt_accounts')->insert($account);
     }
-
-    /**
-     * Generate account name based on type
-     */
-    private function generateAccountName(string $accountType): string
-    {
-        $names = [
-            'wallet' => ['Main Wallet', 'Personal Wallet', 'Digital Wallet', 'Primary Wallet'],
-            'savings' => ['Emergency Fund', 'Vacation Savings', 'Home Savings', 'Future Plans'],
-            'checking' => ['Daily Expenses', 'Business Account', 'Monthly Budget', 'Primary Checking'],
-        ];
-
-        return $names[$accountType][array_rand($names[$accountType])];
-    }
+ 
 }

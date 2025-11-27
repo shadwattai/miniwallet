@@ -21,7 +21,7 @@ return new class extends Migration
             $table->uuid('receiver_acct_key');
             $table->text('description')->nullable(); 
            
-            $table->string('type', 20); // deposit, withdrawal, transfer
+            $table->string('type', 20); // deposit, topup, withdrawal, transfer
             $table->decimal('amount', 26, 2);
             $table->decimal('commission_fee', 26, 2)->default(0);
             $table->string('status', 20)->default('pending'); // pending, completed, failed, cancelled

@@ -30,7 +30,8 @@ import {
     X,
     Ban,
     MinusCircle,
-    Hash
+    Hash,
+    AlertCircle
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useWalletForm } from '@/composables/useWalletForm';
@@ -86,9 +87,35 @@ const showDepositDialog = ref(false);
 const selectedWalletForDeposit = ref<Wallet | null>(null);
 const depositAmount = ref('');
 
+// Withdraw dialog state
+const showWithdrawDialog = ref(false);
+const selectedWalletForWithdraw = ref<Wallet | null>(null);
+const withdrawAmount = ref('');
+
+// Top Up dialog state
+const showTopUpDialog = ref(false);
+const selectedWalletForTopUp = ref<Wallet | null>(null);
+const topUpAmount = ref('');
+const selectedSourceAccount = ref('');
+
 // Deposit form
 const depositForm = useForm({
     wallet_key: '',
+    amount: 0,
+    description: ''
+});
+
+// Withdraw form
+const withdrawForm = useForm({
+    wallet_key: '',
+    amount: 0,
+    description: ''
+});
+
+// Top Up form
+const topUpForm = useForm({
+    wallet_key: '',
+    source_account_key: '',
     amount: 0,
     description: ''
 });
@@ -156,6 +183,23 @@ const formatBalance = (balance: number, currency: string) => {
 const activeWallets = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return [];
     return props.wallets.filter(wallet => wallet.is_active);
+});
+
+const availableSavingsAccounts = computed(() => {
+    if (!props.wallets || !Array.isArray(props.wallets)) return [];
+    return props.wallets.filter(wallet => 
+        wallet.account_type === 'savings' && 
+        wallet.is_active &&
+        Number(wallet.balance) > 1000 // Has more than minimum balance
+    );
+});
+
+const maxTopUpAmount = computed(() => {
+    if (!selectedSourceAccount.value) return 0;
+    const sourceAccount = availableSavingsAccounts.value.find(
+        account => account.key === selectedSourceAccount.value
+    );
+    return sourceAccount ? Math.max(0, Number(sourceAccount.balance) - 1000) : 0;
 });
 
 const inactiveWallets = computed(() => {
@@ -301,6 +345,49 @@ const closeDepositDialog = () => {
     depositForm.clearErrors();
 };
 
+// Open withdraw dialog
+const openWithdrawDialog = (wallet: Wallet) => {
+    selectedWalletForWithdraw.value = wallet;
+    withdrawForm.wallet_key = wallet.key;
+    withdrawForm.amount = 0;
+    withdrawForm.description = '';
+    withdrawAmount.value = '';
+    withdrawForm.clearErrors();
+    showWithdrawDialog.value = true;
+};
+
+// Close withdraw dialog
+const closeWithdrawDialog = () => {
+    showWithdrawDialog.value = false;
+    selectedWalletForWithdraw.value = null;
+    withdrawAmount.value = '';
+    withdrawForm.reset();
+    withdrawForm.clearErrors();
+};
+
+// Open top up dialog
+const openTopUpDialog = (wallet: Wallet) => {
+    selectedWalletForTopUp.value = wallet;
+    topUpForm.wallet_key = wallet.key;
+    topUpForm.source_account_key = '';
+    topUpForm.amount = 0;
+    topUpForm.description = '';
+    topUpAmount.value = '';
+    selectedSourceAccount.value = '';
+    topUpForm.clearErrors();
+    showTopUpDialog.value = true;
+};
+
+// Close top up dialog
+const closeTopUpDialog = () => {
+    showTopUpDialog.value = false;
+    selectedWalletForTopUp.value = null;
+    selectedSourceAccount.value = '';
+    topUpAmount.value = '';
+    topUpForm.reset();
+    topUpForm.clearErrors();
+};
+
 // Submit deposit form
 const submitDepositForm = () => {
     // Convert string amount to number
@@ -321,6 +408,58 @@ const submitDepositForm = () => {
                 severity: 'error',
                 summary: 'Deposit Failed',
                 detail: errors.general || 'Failed to deposit money. Please try again.',
+                life: 5000
+            });
+        }
+    });
+};
+
+// Submit withdraw form
+const submitWithdrawForm = () => {
+    // Convert string amount to number
+    withdrawForm.amount = parseFloat(withdrawAmount.value) || 0;
+    
+    withdrawForm.post('/miniwallet/withdraw', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Withdrawal Successful',
+                detail: `${selectedWalletForWithdraw.value?.currency} ${withdrawForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been withdrawn from "${selectedWalletForWithdraw.value?.account_name}"`,
+                life: 5000
+            });
+            closeWithdrawDialog();
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: 'error',
+                summary: 'Withdrawal Failed',
+                detail: errors.general || errors.amount || 'Failed to withdraw money. Please try again.',
+                life: 5000
+            });
+        }
+    });
+};
+
+// Submit top up form
+const submitTopUpForm = () => {
+    topUpForm.source_account_key = selectedSourceAccount.value;
+    topUpForm.amount = parseFloat(topUpAmount.value) || 0;
+    
+    topUpForm.post('/miniwallet/topup', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Top Up Successful',
+                detail: `${selectedWalletForTopUp.value?.currency} ${topUpForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been transferred to "${selectedWalletForTopUp.value?.account_name}"`,
+                life: 5000
+            });
+            closeTopUpDialog();
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: 'error', 
+                summary: 'Top Up Failed',
+                detail: errors.general || errors.amount || 'Failed to transfer money. Please try again.',
                 life: 5000
             });
         }
@@ -438,7 +577,7 @@ const submitDepositForm = () => {
                             </div>
 
                             <div class="flex gap-2">
-                                <!-- Digital Wallet: Only Transfer -->
+                                <!-- Digital Wallet: Only Transfer and Top Up -->
                                 <template v-if="wallet.account_type === 'wallet'">
                                     <Button outlined severity="info"
                                         class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
@@ -447,6 +586,7 @@ const submitDepositForm = () => {
                                     </Button>
 
                                     <Button outlined severity="help"
+                                        @click="openTopUpDialog(wallet)"
                                         class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <ArrowUp class="w-4 h-4" />
                                         Top up
@@ -470,6 +610,7 @@ const submitDepositForm = () => {
                                     </Button>
                                     
                                     <Button outlined severity="warn"
+                                        @click="openWithdrawDialog(wallet)"
                                         class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
                                         <MinusCircle class="w-4 h-4" />
                                         Withdraw
@@ -722,8 +863,261 @@ const submitDepositForm = () => {
             </div>
         </Dialog>
 
+        <!-- Withdraw Money Dialog -->
+        <Dialog v-model:visible="showWithdrawDialog" modal header="Withdraw Money" class="w-[500px]">
+            <div class="space-y-6">
+                <!-- Wallet Information -->
+                <div v-if="selectedWalletForWithdraw" class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-red-100 rounded-lg">
+                            <MinusCircle class="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ selectedWalletForWithdraw.account_name }}</h4>
+                            <p class="text-sm text-gray-600">{{ selectedWalletForWithdraw.account_number }}</p>
+                            <p class="text-sm text-green-600 font-medium">
+                                Available Balance: {{ selectedWalletForWithdraw.currency }} {{ Number(selectedWalletForWithdraw.balance).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }) }}
+                            </p>
+                            <!-- Show maximum withdrawable amount -->
+                            <p class="text-xs text-orange-600">
+                                Maximum withdrawal: {{ selectedWalletForWithdraw.currency }} 
+                                {{ Math.max(0, Number(selectedWalletForWithdraw.balance) - 1000).toLocaleString('en-US', { 
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2 
+                                }) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Withdraw Form -->
+                <form @submit.prevent="submitWithdrawForm" class="space-y-4">
+                    <!-- Amount Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <DollarSign class="w-4 h-4" />
+                            Withdrawal Amount ({{ selectedWalletForWithdraw?.currency || 'AED' }})
+                        </label>
+                        <InputText
+                            v-model="withdrawAmount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            :max="Math.max(0, Number(selectedWalletForWithdraw?.balance || 0) - 1000)"
+                            placeholder="0.00"
+                            class="w-full"
+                            :class="{ 'p-invalid': withdrawForm.errors.amount }"
+                            inputId="withdraw-amount"
+                        />
+                        <small v-if="withdrawForm.errors.amount" class="text-red-500">{{ withdrawForm.errors.amount }}</small>
+                        <small v-else class="text-gray-500">
+                            Enter amount to withdraw (Minimum AED 1,000 must remain in account)
+                        </small>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Hash class="w-4 h-4" />
+                            Reason for Withdrawal (Optional)
+                        </label>
+                        <InputText
+                            v-model="withdrawForm.description"
+                            placeholder="Enter withdrawal reason"
+                            maxlength="255"
+                            class="w-full"
+                        />
+                        <small class="text-gray-500">Add a note for this withdrawal (optional)</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            outlined
+                            @click="closeWithdrawDialog"
+                            class="flex-1"
+                            :disabled="withdrawForm.processing"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            :loading="withdrawForm.processing"
+                            :disabled="!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > Math.max(0, Number(selectedWalletForWithdraw?.balance || 0) - 1000)"
+                            class="flex-1 bg-red-500 hover:bg-red-600"
+                        >
+                            <MinusCircle class="w-4 h-4 mr-2" />
+                            Withdraw
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </Dialog>
+
         <!-- Confirmation Dialog -->
         <ConfirmDialog />
+
+        <!-- Top Up Wallet Dialog -->
+        <Dialog v-model:visible="showTopUpDialog" modal header="Top Up Digital Wallet" class="w-[600px]">
+            <div class="space-y-6">
+                <!-- Target Wallet Information -->
+                <div v-if="selectedWalletForTopUp" class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <WalletIcon class="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ selectedWalletForTopUp.account_name }}</h4>
+                            <p class="text-sm text-gray-600">Digital Wallet - {{ selectedWalletForTopUp.account_number }}</p>
+                            <p class="text-sm text-blue-600 font-medium">
+                                Current Balance: {{ selectedWalletForTopUp.currency }} 
+                                {{ Number(selectedWalletForTopUp.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Source Account Selection -->
+                <div v-if="availableSavingsAccounts.length > 0" class="space-y-4">
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <PiggyBank class="w-4 h-4" />
+                            Select Source Savings Account
+                        </label>
+                        <Dropdown
+                            v-model="selectedSourceAccount"
+                            :options="availableSavingsAccounts"
+                            option-label="account_name"
+                            option-value="key"
+                            placeholder="Choose which savings account to transfer from"
+                            class="w-full"
+                            :class="{ 'p-invalid': topUpForm.errors.source_account_key }"
+                        >
+                            <template #option="slotProps">
+                                <div class="flex justify-between items-center w-full">
+                                    <div>
+                                        <div class="font-medium">{{ slotProps.option.account_name }}</div>
+                                        <div class="text-sm text-gray-500">{{ slotProps.option.account_number }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium text-green-600">
+                                            {{ slotProps.option.currency }} {{ Number(slotProps.option.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            Available: {{ slotProps.option.currency }} {{ Math.max(0, Number(slotProps.option.balance) - 1000).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </Dropdown>
+                        <small v-if="topUpForm.errors.source_account_key" class="text-red-500">{{ topUpForm.errors.source_account_key }}</small>
+                    </div>
+
+                    <!-- Selected Source Account Details -->
+                    <div v-if="selectedSourceAccount" class="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <PiggyBank class="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                                <h5 class="font-medium text-gray-800">
+                                    {{ availableSavingsAccounts.find(acc => acc.key === selectedSourceAccount)?.account_name }}
+                                </h5>
+                                <p class="text-sm text-green-600">
+                                    Maximum transfer: {{ selectedWalletForTopUp?.currency }} {{ maxTopUpAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Savings Accounts Available -->
+                <div v-else class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-orange-100 rounded-lg">
+                            <AlertCircle class="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                            <h5 class="font-medium text-gray-800">No Savings Accounts Available</h5>
+                            <p class="text-sm text-orange-600">
+                                You need at least one active savings account with sufficient balance to top up your digital wallet.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Up Form -->
+                <form v-if="availableSavingsAccounts.length > 0" @submit.prevent="submitTopUpForm" class="space-y-4">
+                    <!-- Amount Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <ArrowUp class="w-4 h-4" />
+                            Top Up Amount ({{ selectedWalletForTopUp?.currency || 'AED' }})
+                        </label>
+                        <InputText
+                            v-model="topUpAmount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            :max="maxTopUpAmount"
+                            placeholder="0.00"
+                            class="w-full"
+                            :class="{ 'p-invalid': topUpForm.errors.amount }"
+                            :disabled="!selectedSourceAccount"
+                            inputId="topup-amount"
+                        />
+                        <small v-if="topUpForm.errors.amount" class="text-red-500">{{ topUpForm.errors.amount }}</small>
+                        <small v-else-if="selectedSourceAccount" class="text-gray-500">
+                            Maximum: {{ selectedWalletForTopUp?.currency }} {{ maxTopUpAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            (AED 1,000 minimum must remain in savings account)
+                        </small>
+                        <small v-else class="text-gray-500">Please select a source account first</small>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Hash class="w-4 h-4" />
+                            Transfer Description (Optional)
+                        </label>
+                        <InputText
+                            v-model="topUpForm.description"
+                            placeholder="Enter reason for top up"
+                            maxlength="255"
+                            class="w-full"
+                        />
+                        <small class="text-gray-500">Add a note for this transfer (optional)</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            outlined
+                            @click="closeTopUpDialog"
+                            class="flex-1"
+                            :disabled="topUpForm.processing"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            :loading="topUpForm.processing"
+                            :disabled="!selectedSourceAccount || !topUpAmount || parseFloat(topUpAmount) <= 0 || parseFloat(topUpAmount) > maxTopUpAmount"
+                            class="flex-1 bg-blue-500 hover:bg-blue-600"
+                        >
+                            <ArrowUp class="w-4 h-4 mr-2" />
+                            Transfer {{ topUpAmount ? selectedWalletForTopUp?.currency + ' ' + parseFloat(topUpAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '' }}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </Dialog>
+
     </AppLayout>
 </template>
 

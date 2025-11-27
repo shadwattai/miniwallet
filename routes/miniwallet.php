@@ -94,7 +94,19 @@ Route::middleware(
     Route::post('/wallet', [WalletsController::class, 'createWallet'])->name('wallets.create');
     Route::post('/deactivatewallet', [WalletsController::class, 'deactivateWallet'])->name('wallets.deactivate');
     Route::post('/reactivatewallet', [WalletsController::class, 'reactivateWallet'])->name('wallets.reactivate');
-    
-    
+     
     Route::post('/deposit', [TransactionsController::class, 'depositMoney'])->name('wallets.deposit');
+    Route::post('/withdraw', [App\Http\Controllers\TransactionsController::class, 'withdrawMoney'])->name('wallets.withdraw');
+    Route::post('/topup', [App\Http\Controllers\TransactionsController::class, 'topUpWallet'])->name('wallets.topup');
+});
+
+
+Route::middleware(
+    [
+        'auth',
+        'verified',
+        UserActiveMiddleware::class,
+    ]
+)->prefix('/api')->group(function () {
+    Route::post('/transfer', [App\Http\Controllers\TransactionsController::class, 'transferMoney'])->name('wallets.transfer');
 });

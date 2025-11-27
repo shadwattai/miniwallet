@@ -1,31 +1,58 @@
-<<<<<<< HEAD
 # miniwallet
-Miniwallet Web App
-=======
-# Artifacts
-The artifacts of Artificial Intelligence
+Miniwallet Web App 
 
-## Laravel PHP Framework
+## Installation guide
+1. composer install
 
-[![Build Status](https://travis-ci.org/laravel/framework.svg)](https://travis-ci.org/laravel/framework)
-[![Total Downloads](https://poser.pugx.org/laravel/framework/downloads.svg)](https://packagist.org/packages/laravel/framework)
-[![Latest Stable Version](https://poser.pugx.org/laravel/framework/v/stable.svg)](https://packagist.org/packages/laravel/framework)
-[![Latest Unstable Version](https://poser.pugx.org/laravel/framework/v/unstable.svg)](https://packagist.org/packages/laravel/framework)
-[![License](https://poser.pugx.org/laravel/framework/license.svg)](https://packagist.org/packages/laravel/framework)
+2. php artisan migrate
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable, creative experience to be truly fulfilling. Laravel attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as authentication, routing, sessions, queueing, and caching.
+3. php artisan db:seed
+Will insert 
 
-Laravel is accessible, yet powerful, providing powerful tools needed for large, robust applications. A superb inversion of control container, expressive migration system, and tightly integrated unit testing support give you the tools you need to build any application with which you are tasked.
+(i) the root/admin user
+email: root@miniwallet.com
+password: masterpass
 
-## Official Documentation
+(ii) the initial/invisible account
+helps to DR and CR when we Deposit and Withdraw from Savings Accounts
 
-Documentation for the framework can be found on the [Laravel website](http://laravel.com/docs).
+(iii) an initial list of banks to maintain our savings accounts
 
-## Contributing
+## Tech stack
+PHP 8.4
+Laravel 12.32
+PostgreSQL 17
+Vue 3 + Composition API
+PrimeVue CSS component library
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](http://laravel.com/docs/contributions).
+## File structure
+Follows oppinionated structure from the Laravel starter kit
 
-### License
+## Artifacts API
+I created a comprehensive REST-ish API with sanitized reusable methods for common CRUD operations
+Controller classes are found in the Controllers/Artifacts directory and are callable globally in the system.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT)
->>>>>>> 1f2ecc8 (feat: Initialize Mini Wallet application shell with Core Tech Stack)
+## Database structure
+
+
+## Operations
+
+1. When User logs in
+- Going to My Wallets, they can create
+(i) a savings account mapped to the bank
+(ii) a digital wallet account that can transfer to other wallets
+
+2. Initial Deposit transaction
+Make a deposit to the savings account
+this will credit the initial account(invisible) and debit the savings account 
+
+3. Withdraw transaction
+Make a withdraw to the savings account
+this will credit the savings account and debit the initial account(invisible) thus reducing amount from the savings account
+
+4. Topup transaction
+Make a Topup to the digital wallet account
+this will credit the savings account and debit the WALLET account thus reducing amount from the savings account and increasing amounts to the WALLET account.
+
+5. Transfer transaction
+
