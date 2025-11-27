@@ -31,7 +31,11 @@ import {
     Ban,
     MinusCircle,
     Hash,
-    AlertCircle
+    AlertCircle,
+    Send,
+    Search,
+    MessageSquare,
+    UserCheck
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useWalletForm } from '@/composables/useWalletForm';
@@ -39,6 +43,7 @@ import { router } from '@inertiajs/vue3';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -98,6 +103,15 @@ const selectedWalletForTopUp = ref<Wallet | null>(null);
 const topUpAmount = ref('');
 const selectedSourceAccount = ref('');
 
+// Transfer dialog state  
+const showTransferDialog = ref(false);
+const selectedWalletForTransfer = ref<Wallet | null>(null);
+const transferAmount = ref('');
+const selectedReceiverWallet = ref('');
+const walletSearchQuery = ref('');
+const isSearchingWallets = ref(false);
+const searchResults = ref([]);
+
 // Deposit form
 const depositForm = useForm({
     wallet_key: '',
@@ -116,6 +130,14 @@ const withdrawForm = useForm({
 const topUpForm = useForm({
     wallet_key: '',
     source_account_key: '',
+    amount: 0,
+    description: ''
+});
+
+// Transfer form
+const transferForm = useForm({
+    sender_wallet_key: '',
+    receiver_wallet_key: '',
     amount: 0,
     description: ''
 });
@@ -200,6 +222,25 @@ const maxTopUpAmount = computed(() => {
         account => account.key === selectedSourceAccount.value
     );
     return sourceAccount ? Math.max(0, Number(sourceAccount.balance) - 1000) : 0;
+});
+
+// Commission calculation for transfers
+const commissionRate = 0.015; // 1.5%
+const calculatedCommission = computed(() => {
+    const amount = parseFloat(transferAmount.value) || 0;
+    return amount * commissionRate;
+});
+
+const totalDebitAmount = computed(() => {
+    const amount = parseFloat(transferAmount.value) || 0;
+    return amount + calculatedCommission.value;
+});
+
+const maxTransferAmount = computed(() => {
+    if (!selectedWalletForTransfer.value) return 0;
+    const balance = Number(selectedWalletForTransfer.value.balance);
+    // Calculate max transfer considering commission
+    return balance / (1 + commissionRate);
 });
 
 const inactiveWallets = computed(() => {
@@ -388,6 +429,72 @@ const closeTopUpDialog = () => {
     topUpForm.clearErrors();
 };
 
+// Search for receiver wallets
+const searchReceiverWallets = async (query: string) => {
+    if (query.length < 2) {
+        searchResults.value = [];
+        return;
+    }
+
+    isSearchingWallets.value = true;
+    
+    try {
+        const response = await axios.get('/api/search-wallets', {
+            params: { 
+                query: query,
+                exclude_wallet: selectedWalletForTransfer.value?.key,
+                currency: selectedWalletForTransfer.value?.currency
+            }
+        });
+        searchResults.value = response.data.wallets;
+    } catch (error) {
+        console.error('Error searching wallets:', error);
+        searchResults.value = [];
+    } finally {
+        isSearchingWallets.value = false;
+    }
+};
+
+// Watch search query for debounced searching
+watch(walletSearchQuery, (newQuery) => {
+    if (newQuery) {
+        searchReceiverWallets(newQuery);
+    } else {
+        searchResults.value = [];
+    }
+}, { debounce: 300 });
+
+// Select receiver wallet
+const selectReceiverWallet = (wallet: any) => {
+    selectedReceiverWallet.value = wallet.key;
+};
+
+// Open transfer dialog
+const openTransferDialog = (wallet: Wallet) => {
+    selectedWalletForTransfer.value = wallet;
+    transferForm.sender_wallet_key = wallet.key;
+    transferForm.receiver_wallet_key = '';
+    transferForm.amount = 0;
+    transferForm.description = '';
+    transferAmount.value = '';
+    selectedReceiverWallet.value = '';
+    walletSearchQuery.value = '';
+    searchResults.value = [];
+    transferForm.clearErrors();
+    showTransferDialog.value = true;
+};
+
+const closeTransferDialog = () => {
+    showTransferDialog.value = false;
+    selectedWalletForTransfer.value = null;
+    selectedReceiverWallet.value = '';
+    transferAmount.value = '';
+    walletSearchQuery.value = '';
+    searchResults.value = [];
+    transferForm.reset();
+    transferForm.clearErrors();
+};
+
 // Submit deposit form
 const submitDepositForm = () => {
     // Convert string amount to number
@@ -460,6 +567,32 @@ const submitTopUpForm = () => {
                 severity: 'error', 
                 summary: 'Top Up Failed',
                 detail: errors.general || errors.amount || 'Failed to transfer money. Please try again.',
+                life: 5000
+            });
+        }
+    });
+};
+
+// Submit transfer form
+const submitTransferForm = () => {
+    transferForm.receiver_wallet_key = selectedReceiverWallet.value;
+    transferForm.amount = parseFloat(transferAmount.value) || 0;
+    
+    transferForm.post('/api/transactions', {
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Transfer Successful',
+                detail: `${selectedWalletForTransfer.value?.currency} ${transferForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} transferred successfully (Fee: ${calculatedCommission.value.toLocaleString('en-US', { minimumFractionDigits: 2 })})`,
+                life: 6000
+            });
+            closeTransferDialog();
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: 'error', 
+                summary: 'Transfer Failed',
+                detail: errors.general || errors.amount || 'Failed to send money. Please try again.',
                 life: 5000
             });
         }
@@ -580,8 +713,9 @@ const submitTopUpForm = () => {
                                 <!-- Digital Wallet: Only Transfer and Top Up -->
                                 <template v-if="wallet.account_type === 'wallet'">
                                     <Button outlined severity="info"
-                                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <ArrowUpRight class="w-4 h-4" />
+                                        @click="openTransferDialog(wallet)"
+                                        class="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
+                                        <Send class="w-4 h-4" />
                                         Transfer
                                     </Button>
 
@@ -1112,6 +1246,194 @@ const submitTopUpForm = () => {
                         >
                             <ArrowUp class="w-4 h-4 mr-2" />
                             Transfer {{ topUpAmount ? selectedWalletForTopUp?.currency + ' ' + parseFloat(topUpAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '' }}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </Dialog>
+
+        <!-- Transfer Money Dialog -->
+        <Dialog v-model:visible="showTransferDialog" modal header="Transfer Money" class="w-[650px]">
+            <div class="space-y-6">
+                <!-- Sender Wallet Information -->
+                <div v-if="selectedWalletForTransfer" class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-orange-100 rounded-lg">
+                            <Send class="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">From: {{ selectedWalletForTransfer.account_name }}</h4>
+                            <p class="text-sm text-gray-600">{{ selectedWalletForTransfer.account_number }}</p>
+                            <p class="text-sm text-orange-600 font-medium">
+                                Available Balance: {{ selectedWalletForTransfer.currency }} 
+                                {{ Number(selectedWalletForTransfer.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receiver Wallet Search -->
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Search class="w-4 h-4" />
+                            Search Receiver Wallet
+                        </label>
+                        <div class="relative">
+                            <InputText
+                                v-model="walletSearchQuery"
+                                placeholder="Search by account name, number, or owner name"
+                                class="w-full pr-10"
+                                :class="{ 'p-invalid': transferForm.errors.receiver_wallet_key }"
+                            />
+                            <Search class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                        <small v-if="transferForm.errors.receiver_wallet_key" class="text-red-500">{{ transferForm.errors.receiver_wallet_key }}</small>
+                        <small v-else class="text-gray-500">Start typing to search for wallet accounts</small>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div v-if="walletSearchQuery && searchResults.length > 0" class="space-y-2 max-h-60 overflow-y-auto">
+                        <div class="text-sm font-medium text-gray-700 mb-2">
+                            Search Results ({{ searchResults.length }} found)
+                        </div>
+                        <div 
+                            v-for="wallet in searchResults" 
+                            :key="wallet.key"
+                            @click="selectReceiverWallet(wallet)"
+                            class="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                            :class="{ 'border-orange-500 bg-orange-50': selectedReceiverWallet === wallet.key }"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-medium text-gray-800">{{ wallet.account_name }}</div>
+                                    <div class="text-sm text-gray-600">{{ wallet.account_number }}</div>
+                                    <div class="text-sm text-orange-600">Owner: {{ wallet.user_name }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-medium text-green-600">
+                                        {{ wallet.currency }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ wallet.currency }} Wallet</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Results -->
+                    <div v-else-if="walletSearchQuery && !isSearchingWallets && searchResults.length === 0" 
+                         class="p-4 text-center text-gray-500 border border-gray-200 rounded-lg">
+                        <Search class="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p>No wallet accounts found matching "{{ walletSearchQuery }}"</p>
+                        <small>Try searching by account name, number, or owner name</small>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div v-if="isSearchingWallets" class="p-4 text-center">
+                        <div class="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                        <p class="text-sm text-gray-500">Searching wallets...</p>
+                    </div>
+                </div>
+
+                <!-- Selected Receiver Information -->
+                <div v-if="selectedReceiverWallet" class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <UserCheck class="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                            <h5 class="font-medium text-gray-800">
+                                To: {{ searchResults.find(w => w.key === selectedReceiverWallet)?.account_name }}
+                            </h5>
+                            <p class="text-sm text-green-600">
+                                {{ searchResults.find(w => w.key === selectedReceiverWallet)?.account_number }} - 
+                                Owner: {{ searchResults.find(w => w.key === selectedReceiverWallet)?.user_name }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transfer Form -->
+                <form v-if="selectedReceiverWallet" @submit.prevent="submitTransferForm" class="space-y-4">
+                    <!-- Amount Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Send class="w-4 h-4" />
+                            Transfer Amount ({{ selectedWalletForTransfer?.currency || 'AED' }})
+                        </label>
+                        <InputText
+                            v-model="transferAmount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            :max="maxTransferAmount"
+                            placeholder="0.00"
+                            class="w-full"
+                            :class="{ 'p-invalid': transferForm.errors.amount }"
+                        />
+                        <small v-if="transferForm.errors.amount" class="text-red-500">{{ transferForm.errors.amount }}</small>
+                        <small v-else class="text-gray-500">
+                            Maximum: {{ selectedWalletForTransfer?.currency }} {{ maxTransferAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                        </small>
+                    </div>
+
+                    <!-- Commission Info -->
+                    <div v-if="transferAmount" class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h5 class="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                            <AlertCircle class="w-4 h-4 text-yellow-600" />
+                            Transfer Breakdown
+                        </h5>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span>Transfer Amount:</span>
+                                <span class="font-medium">{{ selectedWalletForTransfer?.currency }} {{ parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Commission Fee (1.5%):</span>
+                                <span class="font-medium text-orange-600">{{ selectedWalletForTransfer?.currency }} {{ calculatedCommission.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="flex justify-between font-medium text-red-600">
+                                <span>Total Deducted:</span>
+                                <span>{{ selectedWalletForTransfer?.currency }} {{ totalDebitAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <MessageSquare class="w-4 h-4" />
+                            Transfer Note (Optional)
+                        </label>
+                        <InputText
+                            v-model="transferForm.description"
+                            placeholder="Enter transfer reason or message"
+                            maxlength="255"
+                            class="w-full"
+                        />
+                        <small class="text-gray-500">Add a note for this transfer (optional)</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <Button
+                            type="button"
+                            outlined
+                            @click="closeTransferDialog"
+                            class="flex-1"
+                            :disabled="transferForm.processing"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            :loading="transferForm.processing"
+                            :disabled="!transferAmount || parseFloat(transferAmount) <= 0 || totalDebitAmount > Number(selectedWalletForTransfer?.balance || 0)"
+                            class="flex-1 bg-orange-500 hover:bg-orange-600"
+                        >
+                            <Send class="w-4 h-4 mr-2" />
+                            Send {{ transferAmount ? selectedWalletForTransfer?.currency + ' ' + parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '' }}
                         </Button>
                     </div>
                 </form>

@@ -101,12 +101,4 @@ Route::middleware(
 });
 
 
-Route::middleware(
-    [
-        'auth',
-        'verified',
-        UserActiveMiddleware::class,
-    ]
-)->prefix('/api')->group(function () {
-    Route::post('/transfer', [TransactionsController::class, 'transferMoney'])->name('wallets.transfer');
-});
+

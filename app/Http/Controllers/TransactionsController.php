@@ -574,4 +574,319 @@ class TransactionsController extends Controller
             return back()->withErrors(['general' => 'Failed to process top up transfer. Please try again.'])->withInput();
         }
     }
+
+    public function transferMoney(Request $request)
+    {
+        try {
+            // Validate the request
+            $validated = $request->validate([
+                'sender_wallet_key' => 'required|string',
+                'receiver_wallet_key' => 'required|string',
+                'amount' => 'required|numeric|min:1',
+                'description' => 'nullable|string|max:255'
+            ]);
+
+            $user = Auth::user();
+
+            // Find sender wallet (must belong to authenticated user)
+            $sender_wallets = $this->readController->SearchRows('wlt_accounts', [
+                'key' => $validated['sender_wallet_key'],
+                'user_key' => $user->key
+            ]);
+
+            if (empty($sender_wallets)) {
+                return response()->json(['errors' => ['general' => 'Sender wallet not found or you do not have permission to use this wallet.']], 404);
+            }
+
+            $sender_wallet = $sender_wallets[0];
+
+            // Check if sender wallet is active and is a digital wallet
+            if (!$sender_wallet->is_active) {
+                return response()->json(['errors' => ['general' => 'Cannot transfer from an inactive wallet.']], 400);
+            }
+
+            if ($sender_wallet->account_type !== 'wallet') {
+                return response()->json(['errors' => ['general' => 'Transfers can only be made from digital wallet accounts.']], 400);
+            }
+
+            // Find receiver wallet (can belong to any user)
+            $receiver_wallets = $this->readController->SearchRows('wlt_accounts', [
+                'key' => $validated['receiver_wallet_key']
+            ]);
+
+            if (empty($receiver_wallets)) {
+                return response()->json(['errors' => ['general' => 'Receiver wallet not found.']], 404);
+            }
+
+            $receiver_wallet = $receiver_wallets[0];
+
+            // Check if receiver wallet is active and is a digital wallet
+            if (!$receiver_wallet->is_active) {
+                return response()->json(['errors' => ['general' => 'Cannot transfer to an inactive wallet.']], 400);
+            }
+
+            if ($receiver_wallet->account_type !== 'wallet') {
+                return response()->json(['errors' => ['general' => 'Transfers can only be made to digital wallet accounts.']], 400);
+            }
+
+            // Cannot transfer to same wallet
+            if ($sender_wallet->key === $receiver_wallet->key) {
+                return response()->json(['errors' => ['general' => 'Cannot transfer to the same wallet.']], 400);
+            }
+
+            // Check currency matching
+            if ($sender_wallet->currency !== $receiver_wallet->currency) {
+                return response()->json(['errors' => ['general' => 'Currency mismatch between sender and receiver wallets.']], 400);
+            }
+
+            $transferAmount = floatval($validated['amount']);
+            $commissionRate = 0.015; // 1.5%
+            $commissionFee = $transferAmount * $commissionRate;
+            $totalDebitAmount = $transferAmount + $commissionFee; // Total amount to debit from sender
+
+            $senderCurrentBalance = floatval($sender_wallet->balance);
+            $receiverCurrentBalance = floatval($receiver_wallet->balance);
+
+            // Check if sender has sufficient balance for transfer + commission
+            if ($senderCurrentBalance < $totalDebitAmount) {
+                return response()->json([
+                    'errors' => [
+                        'amount' => 'Insufficient funds. Required: ' . $sender_wallet->currency . ' ' . number_format($totalDebitAmount, 2) . 
+                                  ' (Transfer: ' . number_format($transferAmount, 2) . ' + Commission: ' . number_format($commissionFee, 2) . ').'
+                    ]
+                ], 422);
+            }
+
+            // Find system root user's initial account for commission
+            $root_user = $this->readController->SearchRows('users', [
+                'email' => 'root@miniwallet.com'
+            ]);
+
+            if (empty($root_user)) {
+                return response()->json(['errors' => ['general' => 'System root account not found.']], 500);
+            }
+
+            $system_accounts = $this->readController->SearchRows('wlt_accounts', [
+                'user_key' => $root_user[0]->key,
+                'account_type' => 'initial',
+                'is_active' => true
+            ]);
+
+            if (empty($system_accounts)) {
+                return response()->json(['errors' => ['general' => 'System commission account not found.']], 500);
+            }
+
+            $system_account = $system_accounts[0];
+
+            // Calculate new balances
+            $newSenderBalance = $senderCurrentBalance - $totalDebitAmount;
+            $newReceiverBalance = $receiverCurrentBalance + $transferAmount;
+
+            // Generate reference number
+            $ref_number = 'TR' . strtoupper(uniqid()) . time();
+
+            // 1. Create the main transaction record
+            $transactionData = [
+                'ref_number' => $ref_number,
+                'sender_acct_key' => $sender_wallet->key,
+                'receiver_acct_key' => $receiver_wallet->key,
+                'description' => $validated['description'] ?? 'Wallet to wallet transfer',
+                'type' => 'transfer',
+                'amount' => $transferAmount,
+                'commission_fee' => $commissionFee,
+                'status' => 'completed',
+                'version' => 1
+            ];
+
+            $trxn_key = $this->createController->CreateSingleRow('wlt_transactions', $transactionData);
+
+            if (empty($trxn_key)) {
+                return response()->json(['errors' => ['general' => 'Failed to create transaction record.']], 500);
+            }
+
+            // 2. Create transaction details (3 entries for transfer with commission)
+            
+            // Entry 1: Credit sender wallet (total amount out: transfer + commission)
+            $sender_credit_entry = [
+                'trxn_key' => $trxn_key,
+                'acct_key' => $sender_wallet->key,
+                'description' => "Transfer out (incl. commission) - " . $ref_number,
+                'entry' => 'CR',
+                'amount_dr' => 0,
+                'amount_cr' => $totalDebitAmount, // Transfer amount + commission
+                'version' => 1
+            ];
+
+            $sender_detail_key = $this->createController->CreateSingleRow('wlt_transactions_details', $sender_credit_entry);
+
+            // Entry 2: Debit receiver wallet (transfer amount only)
+            $receiver_debit_entry = [
+                'trxn_key' => $trxn_key,
+                'acct_key' => $receiver_wallet->key,
+                'description' => "Transfer received - " . $ref_number,
+                'entry' => 'DR',
+                'amount_dr' => $transferAmount, // Only the transfer amount
+                'amount_cr' => 0,
+                'version' => 1
+            ];
+
+            $receiver_detail_key = $this->createController->CreateSingleRow('wlt_transactions_details', $receiver_debit_entry);
+
+            // Entry 3: Debit system account (commission fee)
+            $commission_debit_entry = [
+                'trxn_key' => $trxn_key,
+                'acct_key' => $system_account->key,
+                'description' => "Commission fee - " . $ref_number,
+                'entry' => 'DR',
+                'amount_dr' => $commissionFee, // Commission amount
+                'amount_cr' => 0,
+                'version' => 1
+            ];
+
+            $commission_detail_key = $this->createController->CreateSingleRow('wlt_transactions_details', $commission_debit_entry);
+
+            if (!$sender_detail_key || !$receiver_detail_key || !$commission_detail_key) {
+                // Rollback transaction if detail creation fails
+                $this->deleteController->DeleteRow('wlt_transactions', $trxn_key);
+                return response()->json(['errors' => ['general' => 'Failed to create transaction details.']], 500);
+            }
+
+            // 3. Update wallet balances
+            
+            // Update sender wallet (subtract total amount)
+            $senderUpdateResult = $this->updateController->UpdateSingleRow('wlt_accounts', $validated['sender_wallet_key'], [
+                'balance' => $newSenderBalance,
+                'version' => $sender_wallet->version + 1
+            ]);
+
+            // Update receiver wallet (add transfer amount)
+            $receiverUpdateResult = $this->updateController->UpdateSingleRow('wlt_accounts', $validated['receiver_wallet_key'], [
+                'balance' => $newReceiverBalance,
+                'version' => $receiver_wallet->version + 1
+            ]);
+
+            if (!$senderUpdateResult || !$receiverUpdateResult) {
+                // Rollback if balance updates fail
+                $this->deleteController->DeleteRow('wlt_transactions', $trxn_key);
+                $this->deleteController->DeleteRow('wlt_transactions_details', $sender_detail_key);
+                $this->deleteController->DeleteRow('wlt_transactions_details', $receiver_detail_key);
+                $this->deleteController->DeleteRow('wlt_transactions_details', $commission_detail_key);
+                return response()->json(['errors' => ['general' => 'Failed to update wallet balances.']], 500);
+            }
+
+            // Get receiver user info for logging
+            $receiver_user = $this->readController->SearchRows('users', [
+                'key' => $receiver_wallet->user_key
+            ])[0] ?? null;
+
+            Log::info('Wallet transfer completed successfully with commission', [
+                'ref_number' => $ref_number,
+                'sender_user_key' => $user->key,
+                'sender_user_name' => $user->name,
+                'receiver_user_key' => $receiver_wallet->user_key,
+                'receiver_user_name' => $receiver_user->name ?? 'Unknown',
+                'sender_wallet_key' => $sender_wallet->key,
+                'sender_wallet_name' => $sender_wallet->account_name,
+                'receiver_wallet_key' => $receiver_wallet->key,
+                'receiver_wallet_name' => $receiver_wallet->account_name,
+                'transfer_amount' => $transferAmount,
+                'commission_fee' => $commissionFee,
+                'total_debited' => $totalDebitAmount,
+                'currency' => $sender_wallet->currency,
+                'sender_previous_balance' => $senderCurrentBalance,
+                'sender_new_balance' => $newSenderBalance,
+                'receiver_previous_balance' => $receiverCurrentBalance,
+                'receiver_new_balance' => $newReceiverBalance,
+                'transaction_key' => $trxn_key,
+                'system_account_key' => $system_account->key
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transfer completed successfully',
+                'data' => [
+                    'ref_number' => $ref_number,
+                    'transfer_amount' => $transferAmount,
+                    'commission_fee' => $commissionFee,
+                    'total_debited' => $totalDebitAmount,
+                    'currency' => $sender_wallet->currency,
+                    'sender_new_balance' => $newSenderBalance,
+                    'receiver_wallet_name' => $receiver_wallet->account_name,
+                    'receiver_user_name' => $receiver_user->name ?? 'Unknown User'
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to process wallet transfer', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_key' => Auth::user()->key ?? 'unknown'
+            ]);
+
+            return response()->json(['errors' => ['general' => 'Failed to process transfer. Please try again.']], 500);
+        }
+    }
+
+    public function searchWallets(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'query' => 'required|string|min:2',
+                'exclude_wallet' => 'nullable|string',
+                'currency' => 'nullable|string'
+            ]);
+
+            $query = $validated['query'];
+            $excludeWallet = $validated['exclude_wallet'] ?? null;
+            $currency = $validated['currency'] ?? null;
+
+            // Search active wallet accounts with user information
+            $wallets = DB::table('wlt_accounts')
+                ->join('users', 'wlt_accounts.user_key', '=', 'users.key')
+                ->select(
+                    'wlt_accounts.key',
+                    'wlt_accounts.account_name', 
+                    'wlt_accounts.account_number',
+                    'wlt_accounts.currency',
+                    'wlt_accounts.balance',
+                    'users.name as user_name',
+                    'users.handle as user_handle'
+                )
+                ->where('wlt_accounts.account_type', 'wallet')
+                ->where('wlt_accounts.is_active', true)
+                ->where('users.status', 'active')
+                ->whereNull('wlt_accounts.deleted_at')
+                ->whereNull('users.deleted_at')
+                ->where(function($q) use ($query) {
+                    $q->where('wlt_accounts.account_name', 'like', "%{$query}%")
+                      ->orWhere('wlt_accounts.account_number', 'like', "%{$query}%")
+                      ->orWhere('users.name', 'like', "%{$query}%")
+                      ->orWhere('users.handle', 'like', "%{$query}%");
+                })
+                ->when($excludeWallet, function($q, $exclude) {
+                    return $q->where('wlt_accounts.key', '!=', $exclude);
+                })
+                ->when($currency, function($q, $curr) {
+                    return $q->where('wlt_accounts.currency', $curr);
+                })
+                ->orderBy('users.name')
+                ->limit(20)
+                ->get();
+
+            return response()->json([
+                'wallets' => $wallets,
+                'total' => $wallets->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to search wallets', [
+                'error' => $e->getMessage(),
+                'user_key' => Auth::user()->key ?? 'unknown'
+            ]);
+
+            return response()->json(['error' => 'Failed to search wallets.'], 500);
+        }
+    }
 }
