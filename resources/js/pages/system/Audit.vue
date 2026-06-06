@@ -1,24 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { router } from '@inertiajs/vue3';
-import Card from 'primevue/card';
+import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import Toolbar from 'primevue/toolbar';
-import DataTable from 'primevue/datatable';
+import Calendar from 'primevue/calendar';
+import Card from 'primevue/card';
 import Column from 'primevue/column';
-import Paginator from 'primevue/paginator';
-import Skeleton from 'primevue/skeleton';
+import DataTable from 'primevue/datatable';
+import Dialog from 'primevue/dialog';
+import Fieldset from 'primevue/fieldset';
 import IconField from 'primevue/iconfield';
 import InputText from 'primevue/inputtext';
-import Calendar from 'primevue/calendar';
+import Paginator from 'primevue/paginator';
 import Select from 'primevue/select';
+import Skeleton from 'primevue/skeleton';
 import Tag from 'primevue/tag';
-import Badge from 'primevue/badge';
-import Dialog from 'primevue/dialog';
-import ScrollPanel from 'primevue/scrollpanel';
 import Toast from 'primevue/toast';
-import Fieldset from 'primevue/fieldset';
+import Toolbar from 'primevue/toolbar';
 import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref, watch } from 'vue';
 
 interface AuditTrail {
     id: number;
@@ -136,7 +134,7 @@ const loadAuditTrails = async () => {
         toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to load audit trails'
+            detail: 'Failed to load audit trails',
         });
     } finally {
         loading.value = false;
@@ -159,7 +157,7 @@ const getActionSeverity = (action: string) => {
         login: 'success',
         logout: 'secondary',
         approve: 'success',
-        decline: 'danger'
+        decline: 'danger',
     };
     return severityMap[action] || 'info';
 };
@@ -196,30 +194,28 @@ onMounted(() => {
 
     <div>
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-4 gap-4 mb-4" v-if="stats">
-            <Card class="text-center border-l-4 border-blue-500">
+        <div class="mb-4 grid grid-cols-4 gap-4" v-if="stats">
+            <Card class="border-l-4 border-blue-500 text-center">
                 <template #content>
                     <div class="text-2xl font-bold text-blue-600">{{ stats.total_actions.toLocaleString() }}</div>
                     <div class="text-sm text-gray-600">Total Actions</div>
                 </template>
             </Card>
-            <Card class="text-center border-l-4 border-green-500">
+            <Card class="border-l-4 border-green-500 text-center">
                 <template #content>
                     <div class="text-2xl font-bold text-green-600">{{ stats.unique_users }}</div>
                     <div class="text-sm text-gray-600">Active Users</div>
                 </template>
             </Card>
-            <Card class="text-center border-l-4 border-orange-500">
+            <Card class="border-l-4 border-orange-500 text-center">
                 <template #content>
-                    <div class="text-2xl font-bold text-orange-600">{{ (stats.creates + stats.updates +
-                        stats.deletes).toLocaleString() }}</div>
+                    <div class="text-2xl font-bold text-orange-600">{{ (stats.creates + stats.updates + stats.deletes).toLocaleString() }}</div>
                     <div class="text-sm text-gray-600">Data Changes</div>
                 </template>
             </Card>
-            <Card class="text-center border-l-4 border-purple-500">
+            <Card class="border-l-4 border-purple-500 text-center">
                 <template #content>
-                    <div class="text-2xl font-bold text-purple-600">{{ (stats.logins + stats.logouts).toLocaleString()
-                    }}</div>
+                    <div class="text-2xl font-bold text-purple-600">{{ (stats.logins + stats.logouts).toLocaleString() }}</div>
                     <div class="text-sm text-gray-600">Login Sessions</div>
                 </template>
             </Card>
@@ -228,16 +224,20 @@ onMounted(() => {
         <!-- Filters Toolbar -->
         <Toolbar class="mb-4" :style="{ justifyContent: 'space-between', borderRadius: '0px', marginTop: '-5px' }">
             <template #start>
-                <div class="flex gap-2 flex-wrap">
+                <div class="flex flex-wrap gap-2">
                     <IconField>
                         <InputText v-model="searchTerm" placeholder="Search audit logs..." class="w-120" />
                     </IconField>
-                    <Calendar v-model="dateRange" selectionMode="range" placeholder="Date Range"
-                        dateFormat="yy-mm-dd" />
-                    <Select v-model="actionType" :options="actionTypes" optionLabel="label" optionValue="value"
-                        placeholder="Action Type" class="w-48" />
-                    <Button label="Clear" icon="pi pi-times" severity="secondary" outlined @click="clearFilters"
-                        size="small" />
+                    <Calendar v-model="dateRange" selectionMode="range" placeholder="Date Range" dateFormat="yy-mm-dd" />
+                    <Select
+                        v-model="actionType"
+                        :options="actionTypes"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Action Type"
+                        class="w-48"
+                    />
+                    <Button label="Clear" icon="pi pi-times" severity="secondary" outlined @click="clearFilters" size="small" />
                 </div>
             </template>
         </Toolbar>
@@ -245,7 +245,7 @@ onMounted(() => {
         <!-- Loading Skeleton -->
         <Card v-if="loading">
             <template #content>
-                <div v-for="i in 5" :key="i" class="flex items-center gap-4 p-4 border-b">
+                <div v-for="i in 5" :key="i" class="flex items-center gap-4 border-b p-4">
                     <Skeleton width="100px" height="30px"></Skeleton>
                     <Skeleton width="200px" height="20px"></Skeleton>
                     <Skeleton width="150px" height="20px"></Skeleton>
@@ -266,8 +266,7 @@ onMounted(() => {
 
                     <Column field="action" header="Action" style="width: 100px">
                         <template #body="{ data }">
-                            <Tag :value="data.action.toUpperCase()" :severity="getActionSeverity(data.action)"
-                                class="text-xs" />
+                            <Tag :value="data.action.toUpperCase()" :severity="getActionSeverity(data.action)" class="text-xs" />
                         </template>
                     </Column>
 
@@ -285,7 +284,7 @@ onMounted(() => {
 
                     <Column field="user_ip" header="IP Address" style="width: 130px">
                         <template #body="{ data }">
-                            <span class="text-xs font-mono">{{ data.user_ip || 'Unknown' }}</span>
+                            <span class="font-mono text-xs">{{ data.user_ip || 'Unknown' }}</span>
                         </template>
                     </Column>
 
@@ -300,19 +299,24 @@ onMounted(() => {
 
                     <Column header="Actions" style="width: 100px">
                         <template #body="{ data }">
-                            <Button icon="pi pi-eye" severity="info" text size="small" @click="showDetails(data)"
-                                v-tooltip="'View Details'" />
+                            <Button icon="pi pi-eye" severity="info" text size="small" @click="showDetails(data)" v-tooltip="'View Details'" />
                         </template>
                     </Column>
                 </DataTable>
 
                 <!-- Pagination -->
-                <Paginator v-if="totalRecords > perPage" :rows="perPage" :totalRecords="totalRecords"
-                    :first="currentPage * perPage" @page="onPageChange" class="mt-4" />
+                <Paginator
+                    v-if="totalRecords > perPage"
+                    :rows="perPage"
+                    :totalRecords="totalRecords"
+                    :first="currentPage * perPage"
+                    @page="onPageChange"
+                    class="mt-4"
+                />
 
                 <!-- No Data -->
-                <div v-if="auditTrails.length === 0 && !loading" class="text-center py-8 text-gray-500">
-                    <i class="pi pi-history text-4xl mb-2 text-gray-300"></i>
+                <div v-if="auditTrails.length === 0 && !loading" class="py-8 text-center text-gray-500">
+                    <i class="pi pi-history mb-2 text-4xl text-gray-300"></i>
                     <p>No audit trails found</p>
                 </div>
             </template>
@@ -326,46 +330,41 @@ onMounted(() => {
                     <Fieldset legend="Basic Information" class="mb-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">Action</label>
-                                <Tag :value="selectedAuditTrail.action.toUpperCase()"
-                                    :severity="getActionSeverity(selectedAuditTrail.action)" />
+                                <label class="mb-1 block text-sm font-medium">Action</label>
+                                <Tag :value="selectedAuditTrail.action.toUpperCase()" :severity="getActionSeverity(selectedAuditTrail.action)" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Time</label>
+                                <label class="mb-1 block text-sm font-medium">Time</label>
                                 <span class="text-sm">{{ formatDate(selectedAuditTrail.action_time) }}</span>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">Table</label>
+                                <label class="mb-1 block text-sm font-medium">Table</label>
                                 <Badge :value="selectedAuditTrail.table_name || 'system'" severity="info" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">IP Address</label>
-                                <span class="text-sm font-mono">{{ selectedAuditTrail.user_ip || 'Unknown' }}</span>
+                                <label class="mb-1 block text-sm font-medium">IP Address</label>
+                                <span class="font-mono text-sm">{{ selectedAuditTrail.user_ip || 'Unknown' }}</span>
                             </div>
                         </div>
                     </Fieldset>
 
                     <!-- Description -->
                     <Fieldset legend="Description" class="mb-4">
-                        <p class="text-sm bg-gray-50 p-2 rounded">{{ selectedAuditTrail.description || 'No description'
-                        }}</p>
+                        <p class="rounded bg-gray-50 p-2 text-sm">{{ selectedAuditTrail.description || 'No description' }}</p>
                     </Fieldset>
 
                     <!-- User Details -->
                     <Fieldset legend="User Information" class="mb-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">User</label>
+                                <label class="mb-1 block text-sm font-medium">User</label>
                                 <div class="text-sm">
-                                    <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}
-                                    </div>
-                                    <div class="text-xs font-mono text-gray-500">{{ selectedAuditTrail.created_by ||
-                                        'System' }}
-                                    </div>
+                                    <div class="font-semibold">{{ selectedAuditTrail.user_name || 'Unknown User' }}</div>
+                                    <div class="font-mono text-xs text-gray-500">{{ selectedAuditTrail.created_by || 'System' }}</div>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">User Agent</label>
+                                <label class="mb-1 block text-sm font-medium">User Agent</label>
                                 <span class="text-xs">{{ selectedAuditTrail.user_os || 'Unknown' }}</span>
                             </div>
                         </div>
@@ -376,13 +375,17 @@ onMounted(() => {
                         <div class="grid grid-cols-2 gap-4">
                             <!-- Previous Data -->
                             <div>
-                                <label class="block text-sm font-medium mb-2">Previous Data</label>
-                                <pre class="text-xs overflow-auto max-h-64 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words w-full">{{ selectedAuditTrail.prev_data ? JSON.stringify(selectedAuditTrail.prev_data, null, 2) : 'No previous data' }}</pre>
+                                <label class="mb-2 block text-sm font-medium">Previous Data</label>
+                                <pre class="max-h-64 w-full overflow-auto rounded border bg-gray-50 p-3 text-xs break-words whitespace-pre-wrap">{{
+                                    selectedAuditTrail.prev_data ? JSON.stringify(selectedAuditTrail.prev_data, null, 2) : 'No previous data'
+                                }}</pre>
                             </div>
                             <!-- New Data -->
                             <div>
-                                <label class="block text-sm font-medium mb-2">New Data</label>
-                                <pre class="text-xs overflow-auto max-h-64 bg-gray-50 p-3 rounded border whitespace-pre-wrap break-words w-full">{{ selectedAuditTrail.new_data ? JSON.stringify(selectedAuditTrail.new_data, null, 2) : 'No new data' }}</pre>
+                                <label class="mb-2 block text-sm font-medium">New Data</label>
+                                <pre class="max-h-64 w-full overflow-auto rounded border bg-gray-50 p-3 text-xs break-words whitespace-pre-wrap">{{
+                                    selectedAuditTrail.new_data ? JSON.stringify(selectedAuditTrail.new_data, null, 2) : 'No new data'
+                                }}</pre>
                             </div>
                         </div>
                     </Fieldset>

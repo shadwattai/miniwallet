@@ -33,39 +33,36 @@ const props = defineProps<{
     User?: any;
     wallets?: Wallet[];
 }>();
-
 </script>
 
 <template>
-
     <AppLayout :breadcrumbs="breadcrumbs" :User="props.User">
-
         <Head title="HOME" />
 
         <div class="flex h-full flex-1 gap-4 overflow-x-auto rounded-xl p-4">
-            <div class="w-full flex flex-col">
-                <div class="bg-white rounded-lg shadow-sm border">
-                    <div class="px-6 py-4 border-b">
-                        <h2 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                            <WalletIcon class="w-5 h-5" />
+            <div class="flex w-full flex-col">
+                <div class="rounded-lg border bg-white shadow-sm">
+                    <div class="border-b px-6 py-4">
+                        <h2 class="flex items-center gap-2 text-xl font-semibold text-gray-800">
+                            <WalletIcon class="h-5 w-5" />
                             Wallets
                         </h2>
                     </div>
-                    
+
                     <div v-if="props.wallets && props.wallets.length > 0" class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Currency</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Account</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Owner</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Balance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Currency</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Created</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-200 bg-white">
                                 <tr v-for="wallet in props.wallets" :key="wallet.id" class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div>
@@ -81,30 +78,32 @@ const props = defineProps<{
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        <span class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">
                                             {{ wallet.account_type }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
                                         {{ Number(wallet.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                                         {{ wallet.currency }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span :class="wallet.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" 
-                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                                        <span
+                                            :class="wallet.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                            class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                                        >
                                             {{ wallet.is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                                         {{ new Date(wallet.created_at).toLocaleDateString() }}
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div v-else class="px-6 py-12 text-center">
                         <WalletIcon class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">No wallets</h3>

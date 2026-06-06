@@ -2,24 +2,25 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import Fieldset from 'primevue/fieldset';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import TabPanels from 'primevue/tabpanels';
-import Tab from 'primevue/tab';
-import TabPanel from 'primevue/tabpanel';
-import { ref, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import Fieldset from 'primevue/fieldset';
+import Tab from 'primevue/tab';
+import TabList from 'primevue/tablist';
+import TabPanel from 'primevue/tabpanel';
+import TabPanels from 'primevue/tabpanels';
+import Tabs from 'primevue/tabs';
+import { ref } from 'vue';
 
-import Users from './Users.vue';
-import Banks from './Banks.vue';
 import Audit from './Audit.vue';
+import Banks from './Banks.vue';
+import Users from './Users.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Home',
         href: dashboard().url,
-    }, {
+    },
+    {
         title: 'System settings',
         href: '',
     },
@@ -76,10 +77,9 @@ const handleBanksUpdated = () => {
     // Refresh the page to get updated banks data
     router.reload({ only: ['banks'] });
 };
-
 </script>
 
-<template> 
+<template>
     <AppLayout :breadcrumbs="breadcrumbs" :User="props.User">
         <div class="card">
             <Tabs value="0">
@@ -95,16 +95,13 @@ const handleBanksUpdated = () => {
                             <Users :users="props.users" />
                         </Fieldset>
                     </TabPanel>
-                    
+
                     <TabPanel value="1">
                         <Fieldset legend="Banks Management">
-                            <Banks 
-                                :banks="props.banks" 
-                                @banks-updated="handleBanksUpdated"
-                            />
+                            <Banks :banks="props.banks" @banks-updated="handleBanksUpdated" />
                         </Fieldset>
                     </TabPanel>
-                    
+
                     <TabPanel value="2">
                         <Fieldset legend="Audit Trail">
                             <Audit />
@@ -112,7 +109,7 @@ const handleBanksUpdated = () => {
                     </TabPanel>
                 </TabPanels>
             </Tabs>
-        </div> 
+        </div>
     </AppLayout>
 </template>
 

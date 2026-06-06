@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Wallet as WalletIcon } from 'lucide-vue-next';
-
 </script>
 
 <template>
@@ -8,8 +7,10 @@ import { Wallet as WalletIcon } from 'lucide-vue-next';
         <div class="flex items-center">
             <div class="">
                 <div class="flex items-center gap-2 px-2 py-1">
-                    <div class="w-6 h-6 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-md flex items-center justify-center">
-                        <WalletIcon class="w-4 h-4" />
+                    <div
+                        class="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary/80 text-primary-foreground"
+                    >
+                        <WalletIcon class="h-4 w-4" />
                     </div>
                     <!-- <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-foreground truncate">
@@ -17,7 +18,7 @@ import { Wallet as WalletIcon } from 'lucide-vue-next';
                         </p> 
                     </div> -->
                 </div>
-            </div> 
+            </div>
         </div>
     </a>
 </template>

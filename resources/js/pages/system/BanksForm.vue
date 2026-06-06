@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import Dialog from 'primevue/dialog';
+import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Textarea from 'primevue/textarea';
+import Checkbox from 'primevue/checkbox';
+import Dialog from 'primevue/dialog';
+import Divider from 'primevue/divider';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
-import RadioButton from 'primevue/radiobutton';
-import Checkbox from 'primevue/checkbox';
+import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
-import Stepper from 'primevue/stepper';
-import StepList from 'primevue/steplist';
+import RadioButton from 'primevue/radiobutton';
 import Step from 'primevue/step';
-import StepPanels from 'primevue/steppanels';
+import StepList from 'primevue/steplist';
 import StepPanel from 'primevue/steppanel';
-import Divider from 'primevue/divider';
+import StepPanels from 'primevue/steppanels';
+import Stepper from 'primevue/stepper';
+import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
-import { router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 
 interface Bank {
     id?: number;
@@ -75,7 +75,7 @@ const formData = ref<Bank>({
     max_balance: 50000000,
     daily_transfer_limit: 1000000,
     supported_currencies: ['AED'],
-    notes: ''
+    notes: '',
 });
 
 // Form validation errors
@@ -91,7 +91,7 @@ const errors = ref({
     website: '',
     min_balance: '',
     max_balance: '',
-    daily_transfer_limit: ''
+    daily_transfer_limit: '',
 });
 
 // Options for dropdowns
@@ -101,7 +101,7 @@ const countryOptions = [
     { label: 'United Kingdom', value: 'UK' },
     { label: 'Saudi Arabia', value: 'SA' },
     { label: 'India', value: 'IN' },
-    { label: 'Singapore', value: 'SG' }
+    { label: 'Singapore', value: 'SG' },
 ];
 
 const currencyOptions = [
@@ -116,12 +116,12 @@ const currencyOptions = [
 
 const bankTypeOptions = [
     { label: 'Commercial Bank', value: 'commercial' },
-    { label: 'Islamic Bank', value: 'islamic' }
+    { label: 'Islamic Bank', value: 'islamic' },
 ];
 
 // Computed properties
 const isEditMode = computed(() => !!props.bank);
-const dialogTitle = computed(() => isEditMode.value ? 'Edit Bank' : 'Add New Bank');
+const dialogTitle = computed(() => (isEditMode.value ? 'Edit Bank' : 'Add New Bank'));
 
 // Validation functions
 const validateStep1 = () => {
@@ -257,7 +257,7 @@ const submitForm = async () => {
         toast.add({
             severity: 'error',
             summary: 'Validation Error',
-            detail: 'Please fix the form errors before submitting'
+            detail: 'Please fix the form errors before submitting',
         });
         return;
     }
@@ -270,7 +270,7 @@ const submitForm = async () => {
             ...formData.value,
             bank_code: formData.value.bank_code.toUpperCase(),
             swift_code: formData.value.swift_code.toUpperCase(),
-            supported_currencies: JSON.stringify(formData.value.supported_currencies)
+            supported_currencies: JSON.stringify(formData.value.supported_currencies),
         };
 
         const url = isEditMode.value ? `/banks/${props.bank?.key}` : '/banks';
@@ -281,18 +281,17 @@ const submitForm = async () => {
         toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: `Bank ${isEditMode.value ? 'updated' : 'added'} successfully`
+            detail: `Bank ${isEditMode.value ? 'updated' : 'added'} successfully`,
         });
 
         emit('bank-saved', payload);
         closeDialog();
-
     } catch (error: any) {
         console.error('Form submission error:', error);
         toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: error?.response?.data?.message || `Failed to ${isEditMode.value ? 'update' : 'add'} bank`
+            detail: error?.response?.data?.message || `Failed to ${isEditMode.value ? 'update' : 'add'} bank`,
         });
     } finally {
         isSubmitting.value = false;
@@ -325,41 +324,53 @@ const resetForm = () => {
         max_balance: 50000000,
         daily_transfer_limit: 1000000,
         supported_currencies: ['AED'],
-        notes: ''
+        notes: '',
     };
 
-    Object.keys(errors.value).forEach(key => errors.value[key as keyof typeof errors.value] = '');
+    Object.keys(errors.value).forEach((key) => (errors.value[key as keyof typeof errors.value] = ''));
 };
 
 // Watch for bank prop changes (for edit mode)
-watch(() => props.bank, (newBank) => {
-    if (newBank) {
-        formData.value = {
-            ...newBank,
-            supported_currencies: typeof newBank.supported_currencies === 'string'
-                ? JSON.parse(newBank.supported_currencies)
-                : newBank.supported_currencies
-        };
-    }
-}, { immediate: true });
+watch(
+    () => props.bank,
+    (newBank) => {
+        if (newBank) {
+            formData.value = {
+                ...newBank,
+                supported_currencies:
+                    typeof newBank.supported_currencies === 'string' ? JSON.parse(newBank.supported_currencies) : newBank.supported_currencies,
+            };
+        }
+    },
+    { immediate: true },
+);
 
 // Auto-generate bank code from bank name
-watch(() => formData.value.bank_name, (newName) => {
-    if (newName && !isEditMode.value) {
-        const code = newName
-            .split(' ')
-            .map(word => word.charAt(0))
-            .join('')
-            .toUpperCase()
-            .substring(0, 10);
-        formData.value.bank_code = code;
-    }
-});
+watch(
+    () => formData.value.bank_name,
+    (newName) => {
+        if (newName && !isEditMode.value) {
+            const code = newName
+                .split(' ')
+                .map((word) => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 10);
+            formData.value.bank_code = code;
+        }
+    },
+);
 </script>
 
 <template>
-    <Dialog :visible="props.visible" @update:visible="emit('update:visible', $event)" modal :header="dialogTitle"
-        class="w-[800px]" :closable="!isSubmitting">
+    <Dialog
+        :visible="props.visible"
+        @update:visible="emit('update:visible', $event)"
+        modal
+        :header="dialogTitle"
+        class="w-[800px]"
+        :closable="!isSubmitting"
+    >
         <form @submit.prevent="submitForm">
             <Divider />
             <Stepper v-model:value="currentStep" linear>
@@ -380,16 +391,25 @@ watch(() => formData.value.bank_name, (newName) => {
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Bank Name *</label>
-                                    <InputText v-model="formData.bank_name" :class="{ 'p-invalid': errors.bank_name }"
-                                        placeholder="Enter bank name" class="w-full" />
+                                    <label class="mb-1 block text-sm font-medium">Bank Name *</label>
+                                    <InputText
+                                        v-model="formData.bank_name"
+                                        :class="{ 'p-invalid': errors.bank_name }"
+                                        placeholder="Enter bank name"
+                                        class="w-full"
+                                    />
                                     <small class="text-red-500" v-if="errors.bank_name">{{ errors.bank_name }}</small>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Bank Code *</label>
-                                    <InputText v-model="formData.bank_code" :class="{ 'p-invalid': errors.bank_code }"
-                                        placeholder="e.g., ENBD001" class="w-full" maxlength="10" />
+                                    <label class="mb-1 block text-sm font-medium">Bank Code *</label>
+                                    <InputText
+                                        v-model="formData.bank_code"
+                                        :class="{ 'p-invalid': errors.bank_code }"
+                                        placeholder="e.g., ENBD001"
+                                        class="w-full"
+                                        maxlength="10"
+                                    />
                                     <small class="text-red-500" v-if="errors.bank_code">{{ errors.bank_code }}</small>
                                     <small class="text-gray-500" v-else>Max 10 characters</small>
                                 </div>
@@ -397,28 +417,36 @@ watch(() => formData.value.bank_name, (newName) => {
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">SWIFT Code *</label>
-                                    <InputText v-model="formData.swift_code" :class="{ 'p-invalid': errors.swift_code }"
-                                        placeholder="e.g., EBILAEAD" class="w-full" maxlength="11" />
+                                    <label class="mb-1 block text-sm font-medium">SWIFT Code *</label>
+                                    <InputText
+                                        v-model="formData.swift_code"
+                                        :class="{ 'p-invalid': errors.swift_code }"
+                                        placeholder="e.g., EBILAEAD"
+                                        class="w-full"
+                                        maxlength="11"
+                                    />
                                     <small class="text-red-500" v-if="errors.swift_code">{{ errors.swift_code }}</small>
                                     <small class="text-gray-500" v-else>8-11 characters</small>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Country *</label>
-                                    <Dropdown v-model="formData.country_code" :options="countryOptions"
-                                        optionLabel="label" optionValue="value" placeholder="Select country"
-                                        class="w-full" />
+                                    <label class="mb-1 block text-sm font-medium">Country *</label>
+                                    <Dropdown
+                                        v-model="formData.country_code"
+                                        :options="countryOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select country"
+                                        class="w-full"
+                                    />
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">Bank Type *</label>
+                                <label class="mb-2 block text-sm font-medium">Bank Type *</label>
                                 <div class="flex gap-4">
-                                    <div v-for="option in bankTypeOptions" :key="option.value"
-                                        class="flex items-center">
-                                        <RadioButton v-model="formData.bank_type" :inputId="option.value"
-                                            :value="option.value" />
+                                    <div v-for="option in bankTypeOptions" :key="option.value" class="flex items-center">
+                                        <RadioButton v-model="formData.bank_type" :inputId="option.value" :value="option.value" />
                                         <label :for="option.value" class="ml-2">{{ option.label }}</label>
                                     </div>
                                 </div>
@@ -426,7 +454,7 @@ watch(() => formData.value.bank_name, (newName) => {
                         </div>
 
                         <Divider />
-                        <div class="flex justify-end mt-6">
+                        <div class="mt-6 flex justify-end">
                             <Button label="Next" icon="pi pi-arrow-right" @click="nextStep('2')" />
                         </div>
                     </StepPanel>
@@ -437,40 +465,58 @@ watch(() => formData.value.bank_name, (newName) => {
                             <h3 class="text-lg font-semibold">Contact Information</h3>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">Address *</label>
-                                <Textarea v-model="formData.address" :class="{ 'p-invalid': errors.address }"
-                                    placeholder="Enter bank address" rows="3" class="w-full" />
+                                <label class="mb-1 block text-sm font-medium">Address *</label>
+                                <Textarea
+                                    v-model="formData.address"
+                                    :class="{ 'p-invalid': errors.address }"
+                                    placeholder="Enter bank address"
+                                    rows="3"
+                                    class="w-full"
+                                />
                                 <small class="text-red-500" v-if="errors.address">{{ errors.address }}</small>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Phone *</label>
-                                    <InputText v-model="formData.phone" :class="{ 'p-invalid': errors.phone }"
-                                        placeholder="+971-4-1234567" class="w-full" />
+                                    <label class="mb-1 block text-sm font-medium">Phone *</label>
+                                    <InputText
+                                        v-model="formData.phone"
+                                        :class="{ 'p-invalid': errors.phone }"
+                                        placeholder="+971-4-1234567"
+                                        class="w-full"
+                                    />
                                     <small class="text-red-500" v-if="errors.phone">{{ errors.phone }}</small>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Email *</label>
-                                    <InputText v-model="formData.email" :class="{ 'p-invalid': errors.email }"
-                                        placeholder="contact@bank.com" class="w-full" type="email" />
+                                    <label class="mb-1 block text-sm font-medium">Email *</label>
+                                    <InputText
+                                        v-model="formData.email"
+                                        :class="{ 'p-invalid': errors.email }"
+                                        placeholder="contact@bank.com"
+                                        class="w-full"
+                                        type="email"
+                                    />
                                     <small class="text-red-500" v-if="errors.email">{{ errors.email }}</small>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">Website *</label>
-                                <InputText v-model="formData.website" :class="{ 'p-invalid': errors.website }"
-                                    placeholder="https://www.bank.com" class="w-full" type="url" />
+                                <label class="mb-1 block text-sm font-medium">Website *</label>
+                                <InputText
+                                    v-model="formData.website"
+                                    :class="{ 'p-invalid': errors.website }"
+                                    placeholder="https://www.bank.com"
+                                    class="w-full"
+                                    type="url"
+                                />
                                 <small class="text-red-500" v-if="errors.website">{{ errors.website }}</small>
                             </div>
                         </div>
 
                         <Divider />
-                        <div class="flex justify-between mt-6">
-                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary"
-                                @click="previousStep('1')" />
+                        <div class="mt-6 flex justify-between">
+                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary" @click="previousStep('1')" />
                             <Button label="Next" icon="pi pi-arrow-right" @click="nextStep('3')" />
                         </div>
                     </StepPanel>
@@ -481,7 +527,7 @@ watch(() => formData.value.bank_name, (newName) => {
                             <h3 class="text-lg font-semibold">Banking Configuration</h3>
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">Bank Status</label>
+                                <label class="mb-2 block text-sm font-medium">Bank Status</label>
                                 <div class="flex items-center">
                                     <Checkbox v-model="formData.is_active" inputId="is_active" :binary="true" />
                                     <label for="is_active" class="ml-2">Bank is Active</label>
@@ -491,21 +537,18 @@ watch(() => formData.value.bank_name, (newName) => {
                             <Divider />
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">Supported Services</label>
+                                <label class="mb-2 block text-sm font-medium">Supported Services</label>
                                 <div class="space-y-2">
                                     <div class="flex items-center">
-                                        <Checkbox v-model="formData.supports_transfers" inputId="supports_transfers"
-                                            :binary="true" />
+                                        <Checkbox v-model="formData.supports_transfers" inputId="supports_transfers" :binary="true" />
                                         <label for="supports_transfers" class="ml-2">Supports Transfers</label>
                                     </div>
                                     <div class="flex items-center">
-                                        <Checkbox v-model="formData.supports_deposits" inputId="supports_deposits"
-                                            :binary="true" />
+                                        <Checkbox v-model="formData.supports_deposits" inputId="supports_deposits" :binary="true" />
                                         <label for="supports_deposits" class="ml-2">Supports Deposits</label>
                                     </div>
                                     <div class="flex items-center">
-                                        <Checkbox v-model="formData.supports_withdrawals" inputId="supports_withdrawals"
-                                            :binary="true" />
+                                        <Checkbox v-model="formData.supports_withdrawals" inputId="supports_withdrawals" :binary="true" />
                                         <label for="supports_withdrawals" class="ml-2">Supports Withdrawals</label>
                                     </div>
                                 </div>
@@ -514,17 +557,22 @@ watch(() => formData.value.bank_name, (newName) => {
                             <Divider />
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">Supported Currencies</label>
-                                <MultiSelect v-model="formData.supported_currencies" :options="currencyOptions"
-                                    optionLabel="label" optionValue="value" placeholder="Select currencies"
-                                    class="w-full" :maxSelectedLabels="3" />
+                                <label class="mb-1 block text-sm font-medium">Supported Currencies</label>
+                                <MultiSelect
+                                    v-model="formData.supported_currencies"
+                                    :options="currencyOptions"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select currencies"
+                                    class="w-full"
+                                    :maxSelectedLabels="3"
+                                />
                             </div>
                         </div>
 
                         <Divider />
-                        <div class="flex justify-between mt-6">
-                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary"
-                                @click="previousStep('2')" />
+                        <div class="mt-6 flex justify-between">
+                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary" @click="previousStep('2')" />
                             <Button label="Next" icon="pi pi-arrow-right" @click="nextStep('4')" />
                         </div>
                     </StepPanel>
@@ -536,38 +584,52 @@ watch(() => formData.value.bank_name, (newName) => {
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Minimum Balance *</label>
-                                    <InputNumber v-model="formData.min_balance"
-                                        :class="{ 'p-invalid': errors.min_balance }" mode="currency" currency="AED"
-                                        locale="en-US" class="w-full" :min="0" />
-                                    <small class="text-red-500" v-if="errors.min_balance">{{ errors.min_balance
-                                        }}</small>
+                                    <label class="mb-1 block text-sm font-medium">Minimum Balance *</label>
+                                    <InputNumber
+                                        v-model="formData.min_balance"
+                                        :class="{ 'p-invalid': errors.min_balance }"
+                                        mode="currency"
+                                        currency="AED"
+                                        locale="en-US"
+                                        class="w-full"
+                                        :min="0"
+                                    />
+                                    <small class="text-red-500" v-if="errors.min_balance">{{ errors.min_balance }}</small>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium mb-1">Maximum Balance *</label>
-                                    <InputNumber v-model="formData.max_balance"
-                                        :class="{ 'p-invalid': errors.max_balance }" mode="currency" currency="AED"
-                                        locale="en-US" class="w-full" :min="1" />
-                                    <small class="text-red-500" v-if="errors.max_balance">{{ errors.max_balance
-                                        }}</small>
+                                    <label class="mb-1 block text-sm font-medium">Maximum Balance *</label>
+                                    <InputNumber
+                                        v-model="formData.max_balance"
+                                        :class="{ 'p-invalid': errors.max_balance }"
+                                        mode="currency"
+                                        currency="AED"
+                                        locale="en-US"
+                                        class="w-full"
+                                        :min="1"
+                                    />
+                                    <small class="text-red-500" v-if="errors.max_balance">{{ errors.max_balance }}</small>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">Daily Transfer Limit *</label>
-                                <InputNumber v-model="formData.daily_transfer_limit"
-                                    :class="{ 'p-invalid': errors.daily_transfer_limit }" mode="currency" currency="AED"
-                                    locale="en-US" class="w-full" :min="1" />
-                                <small class="text-red-500" v-if="errors.daily_transfer_limit">{{
-                                    errors.daily_transfer_limit }}</small>
+                                <label class="mb-1 block text-sm font-medium">Daily Transfer Limit *</label>
+                                <InputNumber
+                                    v-model="formData.daily_transfer_limit"
+                                    :class="{ 'p-invalid': errors.daily_transfer_limit }"
+                                    mode="currency"
+                                    currency="AED"
+                                    locale="en-US"
+                                    class="w-full"
+                                    :min="1"
+                                />
+                                <small class="text-red-500" v-if="errors.daily_transfer_limit">{{ errors.daily_transfer_limit }}</small>
                             </div>
                         </div>
 
                         <Divider />
-                        <div class="flex justify-between mt-6">
-                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary"
-                                @click="previousStep('3')" />
+                        <div class="mt-6 flex justify-between">
+                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary" @click="previousStep('3')" />
                             <Button label="Next" icon="pi pi-arrow-right" @click="nextStep('5')" />
                         </div>
                     </StepPanel>
@@ -578,18 +640,20 @@ watch(() => formData.value.bank_name, (newName) => {
                             <h3 class="text-lg font-semibold">Additional Settings</h3>
 
                             <div>
-                                <label class="block text-sm font-medium mb-1">Notes</label>
-                                <Textarea v-model="formData.notes"
-                                    placeholder="Add any additional notes about this bank..." rows="4" class="w-full" />
+                                <label class="mb-1 block text-sm font-medium">Notes</label>
+                                <Textarea
+                                    v-model="formData.notes"
+                                    placeholder="Add any additional notes about this bank..."
+                                    rows="4"
+                                    class="w-full"
+                                />
                             </div>
                         </div>
 
                         <Divider />
-                        <div class="flex justify-between mt-6">
-                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary"
-                                @click="previousStep('4')" />
-                            <Button :label="isEditMode ? 'Update Bank' : 'Add Bank'" icon="pi pi-check" type="submit"
-                                :loading="isSubmitting" />
+                        <div class="mt-6 flex justify-between">
+                            <Button label="Previous" outlined icon="pi pi-arrow-left" severity="secondary" @click="previousStep('4')" />
+                            <Button :label="isEditMode ? 'Update Bank' : 'Add Bank'" icon="pi pi-check" type="submit" :loading="isSubmitting" />
                         </div>
                     </StepPanel>
                 </StepPanels>

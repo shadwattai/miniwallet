@@ -5,17 +5,14 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Wallet, ListCheck, Settings, Home, FolderKanban, UserPen, FolderTree, Users as UsersIcon, Wallet2 } from 'lucide-vue-next';
+import { Home, ListCheck, Settings, Wallet, Wallet2 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 import { dashboard } from '@/routes';
 
-
 const props = defineProps<{
     User?: any;
 }>();
-
-
 
 const userNavItems: NavItem[] = [
     {
@@ -25,12 +22,12 @@ const userNavItems: NavItem[] = [
     },
     {
         title: 'My Wallets',
-        href: "/miniwallet/mywallets",
+        href: '/miniwallet/mywallets',
         icon: Wallet,
     },
     {
         title: 'Transactions',
-        href: "/api/transactions",
+        href: '/api/transactions',
         icon: ListCheck,
     },
 ];
@@ -43,33 +40,28 @@ const adminNavItems: NavItem[] = [
     },
     {
         title: 'Wallets',
-        href: "/miniwallet/wallets",
+        href: '/miniwallet/wallets',
         icon: Wallet2,
     },
     {
         title: 'My Wallets',
-        href: "/miniwallet/mywallets",
+        href: '/miniwallet/mywallets',
         icon: Wallet,
     },
     {
         title: 'Transactions',
-        href: "/api/transactions",
+        href: '/api/transactions',
         icon: ListCheck,
     },
     {
         title: 'System settings',
-        href: "/miniwallet/settings",
+        href: '/miniwallet/settings',
         icon: Settings,
     },
 ];
 
 // Combined navigation for admin users
-const adminCombinedNavItems: NavItem[] = [
-    ...userNavItems,
-    ...adminNavItems
-];
-
-
+const adminCombinedNavItems: NavItem[] = [...userNavItems, ...adminNavItems];
 </script>
 
 <template>
@@ -79,7 +71,7 @@ const adminCombinedNavItems: NavItem[] = [
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
                         <Link :href="dashboard()">
-                        <AppLogo />
+                            <AppLogo />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -87,11 +79,9 @@ const adminCombinedNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-
             <NavMain v-if="props.User?.role === 'user'" :items="userNavItems" />
             <NavMain v-if="props.User?.role === 'admin'" :items="adminNavItems" />
             <!-- <NavMain v-if="props.User?.role === 'admin'" :items="adminCombinedNavItems" /> -->
-
         </SidebarContent>
 
         <SidebarFooter>

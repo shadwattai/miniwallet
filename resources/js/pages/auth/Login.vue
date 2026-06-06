@@ -7,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
@@ -19,34 +18,52 @@ defineProps<{
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center">
+    <div class="flex min-h-screen items-center justify-center">
         <div class="mx-auto w-full max-w-[480px]">
             <AuthBase title="" description="">
                 <Head title="Log in" />
 
-                <div class="text-card-foreground shadow p-10 rounded-lg flex flex-col items-center justify-center">
+                <div class="flex flex-col items-center justify-center rounded-lg p-10 text-card-foreground shadow">
                     <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
                         {{ status }}
                     </div>
 
-                    <Form v-bind="AuthenticatedSessionController.store.form()" :reset-on-success="['password']"
-                        v-slot="{ errors, processing }" class="flex flex-col gap-6 w-full">
+                    <Form
+                        v-bind="AuthenticatedSessionController.store.form()"
+                        :reset-on-success="['password']"
+                        v-slot="{ errors, processing }"
+                        class="flex w-full flex-col gap-6"
+                    >
                         <div class="grid gap-6">
                             <div class="grid gap-2">
                                 <Label for="email">Email address</Label>
-                                <Input id="email" type="email" name="email" required autofocus :tabindex="1"
-                                    autocomplete="email" placeholder="email@example.com" />
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    required
+                                    autofocus
+                                    :tabindex="1"
+                                    autocomplete="email"
+                                    placeholder="email@example.com"
+                                />
                                 <InputError :message="errors.email" />
                             </div>
 
                             <div class="grid gap-2">
                                 <div class="flex items-center justify-between">
                                     <Label for="password">Password</Label>
-                                    <TextLink v-if="canResetPassword" :href="request()" class="text-sm" :tabindex="5">
-                                        Forgot password? </TextLink>
+                                    <TextLink v-if="canResetPassword" :href="request()" class="text-sm" :tabindex="5"> Forgot password? </TextLink>
                                 </div>
-                                <Input id="password" type="password" name="password" required :tabindex="2"
-                                    autocomplete="current-password" placeholder="Password" />
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    required
+                                    :tabindex="2"
+                                    autocomplete="current-password"
+                                    placeholder="Password"
+                                />
                                 <InputError :message="errors.password" />
                             </div>
 
@@ -65,7 +82,7 @@ defineProps<{
                     </Form>
                 </div>
 
-                <div class="text-center text-sm text-muted-foreground mt-6" >
+                <div class="mt-6 text-center text-sm text-muted-foreground">
                     Don't have an account?
                     <TextLink href="/register" :tabindex="5">Sign up</TextLink>
                 </div>

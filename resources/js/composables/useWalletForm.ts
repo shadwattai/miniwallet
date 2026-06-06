@@ -1,9 +1,6 @@
-import { ref, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { 
-    CreditCard,
-    PiggyBank
-} from 'lucide-vue-next';
+import { CreditCard, PiggyBank } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 export interface Bank {
     key: string;
@@ -26,12 +23,12 @@ export function useWalletForm(banks?: Bank[]) {
     // Account types configuration
     const accountTypes = [
         { label: 'Digital Wallet', value: 'wallet', icon: CreditCard },
-        { label: 'Savings Account', value: 'savings', icon: PiggyBank }
+        { label: 'Savings Account', value: 'savings', icon: PiggyBank },
     ];
 
     // Currency mapping for display labels
     const currencyLabels: Record<string, string> = {
-        'AED': 'AED - UAE Dirham',
+        AED: 'AED - UAE Dirham',
         // 'USD': 'USD - US Dollar',
         // 'EUR': 'EUR - Euro',
         // 'GBP': 'GBP - British Pound',
@@ -51,7 +48,7 @@ export function useWalletForm(banks?: Bank[]) {
         bank_key: '',
         currency: 'AED',
         initial_balance: 0,
-        is_default: false
+        is_default: false,
     });
 
     // Parse supported currencies (handles both string and array formats)
@@ -70,27 +67,27 @@ export function useWalletForm(banks?: Bank[]) {
     // Get available currencies for selected bank
     const getAvailableCurrencies = (bankKey: string, banksData: Bank[]) => {
         if (!bankKey || !banksData) return [];
-        
-        const selectedBank = banksData.find(bank => bank.key === bankKey);
+
+        const selectedBank = banksData.find((bank) => bank.key === bankKey);
         if (!selectedBank) return [];
-        
+
         const supportedCurrencies = parseSupportedCurrencies(selectedBank.supported_currencies);
-        
-        return supportedCurrencies.map(currency => ({
+
+        return supportedCurrencies.map((currency) => ({
             label: currencyLabels[currency] || `${currency} - ${currency}`,
-            value: currency
+            value: currency,
         }));
     };
 
     // Get selected account type
     const selectedAccountType = computed(() => {
-        return accountTypes.find(type => type.value === form.account_type);
+        return accountTypes.find((type) => type.value === form.account_type);
     });
 
     // Reset currency when bank changes
     const resetCurrencyForBank = (bankKey: string, banksData: Bank[]) => {
         if (bankKey) {
-            const selectedBank = banksData?.find(bank => bank.key === bankKey);
+            const selectedBank = banksData?.find((bank) => bank.key === bankKey);
             if (selectedBank) {
                 const supportedCurrencies = parseSupportedCurrencies(selectedBank.supported_currencies);
                 if (supportedCurrencies.length > 0) {
@@ -112,7 +109,7 @@ export function useWalletForm(banks?: Bank[]) {
             onSuccess: () => {
                 form.reset();
                 onSuccess?.();
-            }
+            },
         });
     };
 
@@ -121,14 +118,14 @@ export function useWalletForm(banks?: Bank[]) {
         form,
         accountTypes,
         currencyLabels,
-        
+
         // Computed
         selectedAccountType,
-        
+
         // Methods
         parseSupportedCurrencies,
         getAvailableCurrencies,
         resetCurrencyForBank,
-        submitForm
+        submitForm,
     };
 }

@@ -1,17 +1,16 @@
-import '../css/app.css';
 import 'primeicons/primeicons.css';
- 
+import '../css/app.css';
+
 import { createInertiaApp } from '@inertiajs/vue3';
+import { configureEcho } from '@laravel/echo-vue';
+import Aura from '@primeuix/themes/aura';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import type { DefineComponent } from 'vue';
-import { createApp, h } from 'vue';
 import PrimeVue from 'primevue/config';
-import { initializeTheme } from './composables/useAppearance';
-import Aura from '@primeuix/themes/aura'; 
 import ConfirmationService from 'primevue/confirmationservice';
 import Tooltip from 'primevue/tooltip';
-import { configureEcho } from '@laravel/echo-vue';
-import { configureEcho } from '@laravel/echo-vue';
+import type { DefineComponent } from 'vue';
+import { createApp, h } from 'vue';
+import { initializeTheme } from './composables/useAppearance';
 
 configureEcho({
     broadcaster: 'pusher',
@@ -20,27 +19,27 @@ configureEcho({
 configureEcho({
     broadcaster: 'reverb',
 });
-  
-import ToastService from 'primevue/toastservice' 
+
+import ToastService from 'primevue/toastservice';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
-    setup({ el, App, props, plugin }) { 
-        const app = createApp({ render: () => h(App, props) }) 
-            .use(plugin) 
+    setup({ el, App, props, plugin }) {
+        const app = createApp({ render: () => h(App, props) })
+            .use(plugin)
             .use(PrimeVue, {
                 theme: {
                     preset: Aura,
                     options: {
                         prefix: 'p',
                         darkModeSelector: 'system',
-                        cssLayer: false
-                    }
+                        cssLayer: false,
+                    },
                 },
-                ripple: true
+                ripple: true,
             })
             .use(ToastService)
             .use(ConfirmationService);
@@ -51,5 +50,5 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
-}); 
+});
 initializeTheme();

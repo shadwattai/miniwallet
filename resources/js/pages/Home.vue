@@ -3,9 +3,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { User as UserIcon, Activity, CreditCard, Settings } from 'lucide-vue-next';
-import { defineProps } from 'vue';
+import { Activity, CreditCard, Settings, User as UserIcon } from 'lucide-vue-next';
 import Chart from 'primevue/chart';
+import { defineProps } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -22,12 +22,12 @@ const props = defineProps<{
 }>();
 
 const chartData = {
-    labels: props.TransactionStatistics?.map(stat => stat.type) || [],
+    labels: props.TransactionStatistics?.map((stat) => stat.type) || [],
     datasets: [
         {
             label: 'Transaction Count',
             backgroundColor: ['#42A5F5', '#66BB6A', '#FFA726', '#26C6DA'],
-            data: props.TransactionStatistics?.map(stat => stat.count) || [],
+            data: props.TransactionStatistics?.map((stat) => stat.count) || [],
         },
     ],
 };
@@ -55,7 +55,7 @@ const chartOptions = {
 
             <!-- Stats Section -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-lg bg-gradient-to-r from-blue-100 to-blue-50 p-4 shadow-md border border-blue-200">
+                <div class="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-100 to-blue-50 p-4 shadow-md">
                     <div class="flex items-center gap-4">
                         <UserIcon class="h-8 w-8 text-blue-500" />
                         <div>
@@ -64,7 +64,7 @@ const chartOptions = {
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-gradient-to-r from-green-100 to-green-50 p-4 shadow-md border border-green-200">
+                <div class="rounded-lg border border-green-200 bg-gradient-to-r from-green-100 to-green-50 p-4 shadow-md">
                     <div class="flex items-center gap-4">
                         <Activity class="h-8 w-8 text-green-500" />
                         <div>
@@ -73,7 +73,7 @@ const chartOptions = {
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-gradient-to-r from-purple-100 to-purple-50 p-4 shadow-md border border-purple-200">
+                <div class="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-100 to-purple-50 p-4 shadow-md">
                     <div class="flex items-center gap-4">
                         <CreditCard class="h-8 w-8 text-purple-500" />
                         <div>
@@ -82,7 +82,7 @@ const chartOptions = {
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 shadow-md border border-yellow-200">
+                <div class="rounded-lg border border-yellow-200 bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 shadow-md">
                     <div class="flex items-center gap-4">
                         <Settings class="h-8 w-8 text-yellow-500" />
                         <div>

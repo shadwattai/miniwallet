@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import Card from 'primevue/card';
+import { FilterMatchMode } from '@primevue/core/api';
+import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import Toolbar from 'primevue/toolbar';
+import Card from 'primevue/card';
 import IconField from 'primevue/iconfield';
 import InputText from 'primevue/inputtext';
-import Badge from 'primevue/badge';
 import Tag from 'primevue/tag';
-import { FilterMatchMode } from '@primevue/core/api';
+import Toolbar from 'primevue/toolbar';
+import { computed, ref, watch } from 'vue';
 import BanksForm from './BanksForm.vue';
 
 interface Bank {
@@ -53,12 +53,15 @@ const selectedBank = ref<Bank | null>(null);
 
 // Debounce search input for better performance
 let searchTimeout: number;
-watch(() => filters.value.global.value, (newValue) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        debouncedSearchTerm.value = newValue || '';
-    }, 300);
-});
+watch(
+    () => filters.value.global.value,
+    (newValue) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            debouncedSearchTerm.value = newValue || '';
+        }, 300);
+    },
+);
 
 // Optimized computed property to filter banks based on debounced search
 const filteredBanks = computed(() => {
@@ -69,12 +72,13 @@ const filteredBanks = computed(() => {
 
     const lowerSearchTerm = searchTerm.toLowerCase();
 
-    return props.banks.filter(bank =>
-        bank.bank_name.toLowerCase().includes(lowerSearchTerm) ||
-        bank.bank_code.toLowerCase().includes(lowerSearchTerm) ||
-        bank.swift_code.toLowerCase().includes(lowerSearchTerm) ||
-        bank.country_code.toLowerCase().includes(lowerSearchTerm) ||
-        bank.bank_type.toLowerCase().includes(lowerSearchTerm)
+    return props.banks.filter(
+        (bank) =>
+            bank.bank_name.toLowerCase().includes(lowerSearchTerm) ||
+            bank.bank_code.toLowerCase().includes(lowerSearchTerm) ||
+            bank.swift_code.toLowerCase().includes(lowerSearchTerm) ||
+            bank.country_code.toLowerCase().includes(lowerSearchTerm) ||
+            bank.bank_type.toLowerCase().includes(lowerSearchTerm),
     );
 });
 
@@ -92,7 +96,7 @@ const formatCurrency = (amount: number) => {
         style: 'currency',
         currency: 'AED',
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 0,
     }).format(amount);
 };
 
@@ -131,7 +135,6 @@ const openWebsite = (url: string) => {
 
 // Remove unused loading ref
 // const loading = ref(true);
-
 </script>
 
 <template>
@@ -148,53 +151,58 @@ const openWebsite = (url: string) => {
         </Toolbar>
 
         <!-- No Banks Message -->
-        <div class="text-center py-12 text-gray-500" v-if="!props.banks || props.banks.length === 0">
-            <i class="pi pi-building text-6xl mb-4 text-gray-300"></i>
-            <h3 class="text-xl mb-2">No Banks Found</h3>
+        <div class="py-12 text-center text-gray-500" v-if="!props.banks || props.banks.length === 0">
+            <i class="pi pi-building mb-4 text-6xl text-gray-300"></i>
+            <h3 class="mb-2 text-xl">No Banks Found</h3>
             <p class="mb-4">There are currently no banks configured in the system.</p>
             <p class="text-sm">Click the "ADD BANK" button to add your first bank.</p>
         </div>
 
         <!-- Banks Grid -->
-        <div class="grid grid-cols-3 gap-4" style="margin-top: 12px; margin: 12px;"
-            v-if="props.banks && props.banks.length > 0">
-            <Card v-for="bank in filteredBanks" :key="bank.key"
-                :style="{ 'box-shadow': '0 2px 12px 0 rgba(0, 0, 0, 0.1)', 'border-radius': '6px', 'overflow': 'hidden' }">
+        <div class="grid grid-cols-3 gap-4" style="margin-top: 12px; margin: 12px" v-if="props.banks && props.banks.length > 0">
+            <Card
+                v-for="bank in filteredBanks"
+                :key="bank.key"
+                :style="{ 'box-shadow': '0 2px 12px 0 rgba(0, 0, 0, 0.1)', 'border-radius': '6px', overflow: 'hidden' }"
+            >
                 <template #header>
-                    <div class="bg-gradient-to-r from-blue-400 to-cyan-500 h-12 flex items-center justify-between px-4">
+                    <div class="flex h-12 items-center justify-between bg-gradient-to-r from-blue-400 to-cyan-500 px-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                                <i class="pi pi-building text-white text-sm"></i>
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                                <i class="pi pi-building text-sm text-white"></i>
                             </div>
-                            <span class="text-white font-medium text-sm">{{ bank.bank_code }}</span>
+                            <span class="text-sm font-medium text-white">{{ bank.bank_code }}</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <Button icon="pi pi-external-link" 
-                                    severity="secondary" 
-                                    rounded
-                                    @click="openWebsite(bank.website)" 
-                                    size="small"
-                                    class="bg-white text-blue-500 hover:bg-gray-100"
-                                    v-tooltip="'Visit Website'" />
-                            <Button icon="pi pi-pencil" 
-                                    severity="secondary" 
-                                    rounded
-                                    @click="openEditBankDialog(bank)" 
-                                    size="small"
-                                    class="bg-white text-blue-500 hover:bg-gray-100"
-                                    v-tooltip="'Edit Bank'" />
-                            <Tag :severity="getStatusSeverity(bank.is_active)"
-                                :value="bank.is_active ? 'Active' : 'Inactive'" class="text-xs" />
+                            <Button
+                                icon="pi pi-external-link"
+                                severity="secondary"
+                                rounded
+                                @click="openWebsite(bank.website)"
+                                size="small"
+                                class="bg-white text-blue-500 hover:bg-gray-100"
+                                v-tooltip="'Visit Website'"
+                            />
+                            <Button
+                                icon="pi pi-pencil"
+                                severity="secondary"
+                                rounded
+                                @click="openEditBankDialog(bank)"
+                                size="small"
+                                class="bg-white text-blue-500 hover:bg-gray-100"
+                                v-tooltip="'Edit Bank'"
+                            />
+                            <Tag :severity="getStatusSeverity(bank.is_active)" :value="bank.is_active ? 'Active' : 'Inactive'" class="text-xs" />
                         </div>
                     </div>
                 </template>
 
                 <template #title>
-                    <span class="font-semibold text-lg">{{ bank.bank_name }}</span>
+                    <span class="text-lg font-semibold">{{ bank.bank_name }}</span>
                 </template>
 
                 <template #subtitle>
-                    <div class="flex flex-wrap gap-1 mb-3">
+                    <div class="mb-3 flex flex-wrap gap-1">
                         <Badge :value="bank.bank_code" severity="info" class="text-xs" />
                         <Badge :value="bank.swift_code" severity="secondary" class="text-xs" />
                         <Tag :value="bank.bank_type" :severity="getBankTypeVariant(bank.bank_type)" class="text-xs" />
@@ -204,12 +212,12 @@ const openWebsite = (url: string) => {
                 <template #content>
                     <div class="space-y-2 text-sm">
                         <div class="flex items-center">
-                            <i class="pi pi-map-marker text-gray-400 mr-2"></i>
+                            <i class="pi pi-map-marker mr-2 text-gray-400"></i>
                             <span class="truncate">{{ bank.country_code }}</span>
                         </div>
 
                         <div class="flex items-center">
-                            <i class="pi pi-phone text-gray-400 mr-2"></i>
+                            <i class="pi pi-phone mr-2 text-gray-400"></i>
                             <span class="truncate">{{ bank.phone }}</span>
                         </div>
 
@@ -225,10 +233,15 @@ const openWebsite = (url: string) => {
                         </div>
 
                         <div>
-                            <span class="text-gray-500 text-xs">Supported Currencies:</span>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                <Badge v-for="currency in parseCurrencies(bank.supported_currencies)" :key="currency"
-                                    :value="currency" severity="contrast" class="text-xs" />
+                            <span class="text-xs text-gray-500">Supported Currencies:</span>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                <Badge
+                                    v-for="currency in parseCurrencies(bank.supported_currencies)"
+                                    :key="currency"
+                                    :value="currency"
+                                    severity="contrast"
+                                    class="text-xs"
+                                />
                             </div>
                         </div>
 
@@ -242,17 +255,12 @@ const openWebsite = (url: string) => {
             </Card>
 
             <!-- Show message when no results found -->
-            <div v-if="filteredBanks.length === 0 && filters.global.value"
-                class="col-span-3 text-center py-8 text-gray-500">
+            <div v-if="filteredBanks.length === 0 && filters.global.value" class="col-span-3 py-8 text-center text-gray-500">
                 No banks found matching "{{ filters.global.value }}"
             </div>
         </div>
 
         <!-- Banks Form Dialog -->
-        <BanksForm 
-            v-model:visible="showBankForm" 
-            :bank="selectedBank"
-            @bank-saved="handleBankSaved"
-        />
+        <BanksForm v-model:visible="showBankForm" :bank="selectedBank" @bank-saved="handleBankSaved" />
     </div>
 </template>

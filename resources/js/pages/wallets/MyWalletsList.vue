@@ -1,48 +1,45 @@
 <script setup lang="ts">
+import { useWalletForm } from '@/composables/useWalletForm';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
-import Checkbox from 'primevue/checkbox';
-import Divider from 'primevue/divider';
-import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast'; 
+import { Head, router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
-    Wallet2 as WalletIcon,
-    CreditCard,
-    PiggyBank,
+    AlertCircle,
+    ArrowUp,
+    Ban,
     Banknote,
-    Plus,
+    Building2,
+    CreditCard,
+    DollarSign,
     Eye,
     EyeOff,
-    TrendingUp,
-    ArrowUp,
-    ArrowUpRight, 
-    Building2,
-    User, 
-    DollarSign,
-    Save,
-    X,
-    Ban,
-    MinusCircle,
     Hash,
-    AlertCircle,
-    Send,
-    Search,
     MessageSquare,
-    UserCheck
+    MinusCircle,
+    PiggyBank,
+    Plus,
+    Save,
+    Search,
+    Send,
+    TrendingUp,
+    User,
+    UserCheck,
+    Wallet2 as WalletIcon,
+    X,
 } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
-import { useWalletForm } from '@/composables/useWalletForm';
-import { router } from '@inertiajs/vue3';
+import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Dialog from 'primevue/dialog';
+import Divider from 'primevue/divider';
+import Dropdown from 'primevue/dropdown';
+import InputText from 'primevue/inputtext';
+import Toast from 'primevue/toast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { useForm } from '@inertiajs/vue3';
-import axios from 'axios';
+import { computed, ref, watch } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -102,7 +99,7 @@ const selectedWalletForTopUp = ref<Wallet | null>(null);
 const topUpAmount = ref('');
 const selectedSourceAccount = ref('');
 
-// Transfer dialog state  
+// Transfer dialog state
 const showTransferDialog = ref(false);
 const selectedWalletForTransfer = ref<Wallet | null>(null);
 const transferAmount = ref('');
@@ -115,14 +112,14 @@ const searchResults = ref([]);
 const depositForm = useForm({
     wallet_key: '',
     amount: 0,
-    description: ''
+    description: '',
 });
 
 // Withdraw form
 const withdrawForm = useForm({
     wallet_key: '',
     amount: 0,
-    description: ''
+    description: '',
 });
 
 // Top Up form
@@ -130,7 +127,7 @@ const topUpForm = useForm({
     wallet_key: '',
     source_account_key: '',
     amount: 0,
-    description: ''
+    description: '',
 });
 
 // Transfer form
@@ -138,7 +135,7 @@ const transferForm = useForm({
     sender_wallet_key: '',
     receiver_wallet_key: '',
     amount: 0,
-    description: ''
+    description: '',
 });
 
 // Use confirmation dialog
@@ -148,14 +145,7 @@ const confirm = useConfirm();
 const toast = useToast();
 
 // Use wallet form composable
-const {
-    form,
-    accountTypes,
-    selectedAccountType,
-    getAvailableCurrencies,
-    resetCurrencyForBank,
-    submitForm: submitWalletForm
-} = useWalletForm();
+const { form, accountTypes, selectedAccountType, getAvailableCurrencies, resetCurrencyForBank, submitForm: submitWalletForm } = useWalletForm();
 
 // Available currencies based on selected bank
 const availableCurrencies = computed(() => {
@@ -164,9 +154,7 @@ const availableCurrencies = computed(() => {
 
 const totalBalance = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return 0;
-    return props.wallets
-        .filter(wallet => wallet.is_active)
-        .reduce((sum, wallet) => sum + Number(wallet.balance), 0);
+    return props.wallets.filter((wallet) => wallet.is_active).reduce((sum, wallet) => sum + Number(wallet.balance), 0);
 });
 
 const getAccountIcon = (type: string) => {
@@ -197,29 +185,25 @@ const formatBalance = (balance: number, currency: string) => {
     if (hideBalances.value) return '••••••••••••';
     return `${currency} ${Number(balance).toLocaleString('en-US', {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     })}`;
 };
 
 const activeWallets = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return [];
-    return props.wallets.filter(wallet => wallet.is_active);
+    return props.wallets.filter((wallet) => wallet.is_active);
 });
 
 const availableSavingsAccounts = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return [];
-    return props.wallets.filter(wallet => 
-        wallet.account_type === 'savings' && 
-        wallet.is_active &&
-        Number(wallet.balance) > 1000 // Has more than minimum balance
+    return props.wallets.filter(
+        (wallet) => wallet.account_type === 'savings' && wallet.is_active && Number(wallet.balance) > 1000, // Has more than minimum balance
     );
 });
 
 const maxTopUpAmount = computed(() => {
     if (!selectedSourceAccount.value) return 0;
-    const sourceAccount = availableSavingsAccounts.value.find(
-        account => account.key === selectedSourceAccount.value
-    );
+    const sourceAccount = availableSavingsAccounts.value.find((account) => account.key === selectedSourceAccount.value);
     return sourceAccount ? Math.max(0, Number(sourceAccount.balance) - 1000) : 0;
 });
 
@@ -245,29 +229,29 @@ const maxTransferAmount = computed(() => {
 // Group search results by user
 const groupedSearchResults = computed(() => {
     if (!searchResults.value || searchResults.value.length === 0) return [];
-    
+
     // Group wallets by user
     const userGroups = {};
-    
-    searchResults.value.forEach(wallet => {
+
+    searchResults.value.forEach((wallet) => {
         if (!userGroups[wallet.user_key]) {
             userGroups[wallet.user_key] = {
                 user_key: wallet.user_key,
                 user_name: wallet.user_name,
                 user_email: wallet.user_email,
                 user_handle: wallet.user_handle,
-                wallets: []
+                wallets: [],
             };
         }
         userGroups[wallet.user_key].wallets.push(wallet);
     });
-    
+
     return Object.values(userGroups);
 });
 
 const inactiveWallets = computed(() => {
     if (!props.wallets || !Array.isArray(props.wallets)) return [];
-    return props.wallets.filter(wallet => !wallet.is_active);
+    return props.wallets.filter((wallet) => !wallet.is_active);
 });
 
 const openCreateDialog = () => {
@@ -282,7 +266,7 @@ const submitForm = () => {
             severity: 'success',
             summary: 'Wallet Created',
             detail: 'Your new wallet has been created successfully',
-            life: 4000
+            life: 4000,
         });
     });
 };
@@ -294,9 +278,12 @@ const closeCreateDialog = () => {
 };
 
 // Watch for bank selection changes to reset currency
-watch(() => form.bank_key, (newBankKey) => {
-    resetCurrencyForBank(newBankKey, props.banks || []);
-});
+watch(
+    () => form.bank_key,
+    (newBankKey) => {
+        resetCurrencyForBank(newBankKey, props.banks || []);
+    },
+);
 
 // Deactivate wallet function
 const deactivateWallet = (wallet: Wallet) => {
@@ -310,36 +297,40 @@ const deactivateWallet = (wallet: Wallet) => {
         acceptLabel: 'Deactivate',
         accept: () => {
             // Submit deactivation request
-            router.post('/miniwallet/deactivatewallet', {
-                wallet_key: wallet.key
-            }, {
-                onSuccess: (page) => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Wallet Deactivated',
-                        detail: `"${wallet.account_name}" has been successfully deactivated`,
-                        life: 5000
-                    });
+            router.post(
+                '/miniwallet/deactivatewallet',
+                {
+                    wallet_key: wallet.key,
                 },
-                onError: (errors) => {
-                    console.error('Failed to deactivate wallet:', errors);
-                    toast.add({
-                        severity: 'error',
-                        summary: 'Deactivation Failed',
-                        detail: errors.general || 'Failed to deactivate wallet. Please try again.',
-                        life: 5000
-                    });
-                }
-            });
+                {
+                    onSuccess: (page) => {
+                        toast.add({
+                            severity: 'success',
+                            summary: 'Wallet Deactivated',
+                            detail: `"${wallet.account_name}" has been successfully deactivated`,
+                            life: 5000,
+                        });
+                    },
+                    onError: (errors) => {
+                        console.error('Failed to deactivate wallet:', errors);
+                        toast.add({
+                            severity: 'error',
+                            summary: 'Deactivation Failed',
+                            detail: errors.general || 'Failed to deactivate wallet. Please try again.',
+                            life: 5000,
+                        });
+                    },
+                },
+            );
         },
         reject: () => {
             toast.add({
                 severity: 'info',
                 summary: 'Cancelled',
                 detail: 'Wallet deactivation was cancelled',
-                life: 3000
+                life: 3000,
             });
-        }
+        },
     });
 };
 
@@ -355,36 +346,40 @@ const reactivateWallet = (wallet: Wallet) => {
         acceptLabel: 'Reactivate',
         accept: () => {
             // Submit reactivation request
-            router.post('/miniwallet/reactivatewallet', {
-                wallet_key: wallet.key
-            }, {
-                onSuccess: (page) => {
-                    toast.add({
-                        severity: 'success',
-                        summary: 'Wallet Reactivated',
-                        detail: `"${wallet.account_name}" has been successfully reactivated`,
-                        life: 5000
-                    });
+            router.post(
+                '/miniwallet/reactivatewallet',
+                {
+                    wallet_key: wallet.key,
                 },
-                onError: (errors) => {
-                    console.error('Failed to reactivate wallet:', errors);
-                    toast.add({
-                        severity: 'error',
-                        summary: 'Reactivation Failed',
-                        detail: errors.general || 'Failed to reactivate wallet. Please try again.',
-                        life: 5000
-                    });
-                }
-            });
+                {
+                    onSuccess: (page) => {
+                        toast.add({
+                            severity: 'success',
+                            summary: 'Wallet Reactivated',
+                            detail: `"${wallet.account_name}" has been successfully reactivated`,
+                            life: 5000,
+                        });
+                    },
+                    onError: (errors) => {
+                        console.error('Failed to reactivate wallet:', errors);
+                        toast.add({
+                            severity: 'error',
+                            summary: 'Reactivation Failed',
+                            detail: errors.general || 'Failed to reactivate wallet. Please try again.',
+                            life: 5000,
+                        });
+                    },
+                },
+            );
         },
         reject: () => {
             toast.add({
                 severity: 'info',
                 summary: 'Cancelled',
                 detail: 'Wallet reactivation was cancelled',
-                life: 3000
+                life: 3000,
             });
-        }
+        },
     });
 };
 
@@ -459,14 +454,14 @@ const searchReceiverWallets = async (query: string) => {
     }
 
     isSearchingWallets.value = true;
-    
+
     try {
         const response = await axios.get('/api/search-wallets', {
-            params: { 
+            params: {
                 query: query,
                 exclude_wallet: selectedWalletForTransfer.value?.key,
-                currency: selectedWalletForTransfer.value?.currency
-            }
+                currency: selectedWalletForTransfer.value?.currency,
+            },
         });
         searchResults.value = response.data.wallets;
     } catch (error) {
@@ -478,13 +473,17 @@ const searchReceiverWallets = async (query: string) => {
 };
 
 // Watch search query for debounced searching
-watch(walletSearchQuery, (newQuery) => {
-    if (newQuery) {
-        searchReceiverWallets(newQuery);
-    } else {
-        searchResults.value = [];
-    }
-}, { debounce: 300 });
+watch(
+    walletSearchQuery,
+    (newQuery) => {
+        if (newQuery) {
+            searchReceiverWallets(newQuery);
+        } else {
+            searchResults.value = [];
+        }
+    },
+    { debounce: 300 },
+);
 
 // Select receiver wallet
 const selectReceiverWallet = (wallet: any) => {
@@ -521,14 +520,14 @@ const closeTransferDialog = () => {
 const submitDepositForm = () => {
     // Convert string amount to number
     depositForm.amount = parseFloat(depositAmount.value) || 0;
-    
+
     depositForm.post('/miniwallet/deposit', {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
                 summary: 'Deposit Successful',
                 detail: `${selectedWalletForDeposit.value?.currency} ${depositForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been deposited to "${selectedWalletForDeposit.value?.account_name}"`,
-                life: 5000
+                life: 5000,
             });
             closeDepositDialog();
         },
@@ -537,9 +536,9 @@ const submitDepositForm = () => {
                 severity: 'error',
                 summary: 'Deposit Failed',
                 detail: errors.general || 'Failed to deposit money. Please try again.',
-                life: 5000
+                life: 5000,
             });
-        }
+        },
     });
 };
 
@@ -547,14 +546,14 @@ const submitDepositForm = () => {
 const submitWithdrawForm = () => {
     // Convert string amount to number
     withdrawForm.amount = parseFloat(withdrawAmount.value) || 0;
-    
+
     withdrawForm.post('/miniwallet/withdraw', {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
                 summary: 'Withdrawal Successful',
                 detail: `${selectedWalletForWithdraw.value?.currency} ${withdrawForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been withdrawn from "${selectedWalletForWithdraw.value?.account_name}"`,
-                life: 5000
+                life: 5000,
             });
             closeWithdrawDialog();
         },
@@ -563,9 +562,9 @@ const submitWithdrawForm = () => {
                 severity: 'error',
                 summary: 'Withdrawal Failed',
                 detail: errors.general || errors.amount || 'Failed to withdraw money. Please try again.',
-                life: 5000
+                life: 5000,
             });
-        }
+        },
     });
 };
 
@@ -573,25 +572,25 @@ const submitWithdrawForm = () => {
 const submitTopUpForm = () => {
     topUpForm.source_account_key = selectedSourceAccount.value;
     topUpForm.amount = parseFloat(topUpAmount.value) || 0;
-    
+
     topUpForm.post('/miniwallet/topup', {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
                 summary: 'Top Up Successful',
                 detail: `${selectedWalletForTopUp.value?.currency} ${topUpForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} has been transferred to "${selectedWalletForTopUp.value?.account_name}"`,
-                life: 5000
+                life: 5000,
             });
             closeTopUpDialog();
         },
         onError: (errors) => {
             toast.add({
-                severity: 'error', 
+                severity: 'error',
                 summary: 'Top Up Failed',
                 detail: errors.general || errors.amount || 'Failed to transfer money. Please try again.',
-                life: 5000
+                life: 5000,
             });
-        }
+        },
     });
 };
 
@@ -599,84 +598,86 @@ const submitTopUpForm = () => {
 const submitTransferForm = () => {
     transferForm.receiver_wallet_key = selectedReceiverWallet.value;
     transferForm.amount = parseFloat(transferAmount.value) || 0;
-    
+
     transferForm.post('/api/transactions', {
         onSuccess: () => {
             toast.add({
                 severity: 'success',
                 summary: 'Transfer Successful',
                 detail: `${selectedWalletForTransfer.value?.currency} ${transferForm.amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} transferred successfully (Fee: ${calculatedCommission.value.toLocaleString('en-US', { minimumFractionDigits: 2 })})`,
-                life: 6000
+                life: 6000,
             });
             closeTransferDialog();
         },
         onError: (errors) => {
             toast.add({
-                severity: 'error', 
+                severity: 'error',
                 summary: 'Transfer Failed',
                 detail: errors.general || errors.amount || 'Failed to send money. Please try again.',
-                life: 5000
+                life: 5000,
             });
-        }
+        },
     });
 };
-
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs" :User="props.User">
-
         <Head title="My Wallets" />
 
         <!-- Toast Component -->
         <Toast />
 
         <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-2">
-
-
             <!-- Header Section -->
             <div class="rounded-2xl p-6">
-                <div class="flex items-center justify-between mb-6">
+                <div class="mb-6 flex items-center justify-between">
                     <div>
-                        <h1 class="text-2xl font-bold mb-1 text-gray-800">My Wallets</h1>
+                        <h1 class="mb-1 text-2xl font-bold text-gray-800">My Wallets</h1>
                         <p class="text-gray-600">Managing my financial accounts</p>
                     </div>
-                    <button @click="openCreateDialog"
-                        class="bg-blue-500 hover:bg-blue-600 text-white rounded-xl p-3 transition-all duration-200 shadow-md hover:shadow-lg">
-                        <Plus class="w-6 h-6" />
+                    <button
+                        @click="openCreateDialog"
+                        class="rounded-xl bg-blue-500 p-3 text-white shadow-md transition-all duration-200 hover:bg-blue-600 hover:shadow-lg"
+                    >
+                        <Plus class="h-6 w-6" />
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div class="mb-3 flex items-center justify-between">
                             <h3 class="text-sm font-medium text-gray-700">Total Balance</h3>
-                            <button @click="hideBalances = !hideBalances"
-                                class="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-                                <Eye v-if="hideBalances" class="w-4 h-4 text-gray-600" />
-                                <EyeOff v-else class="w-4 h-4 text-gray-600" />
+                            <button @click="hideBalances = !hideBalances" class="rounded-lg p-1 transition-colors hover:bg-gray-100">
+                                <Eye v-if="hideBalances" class="h-4 w-4 text-gray-600" />
+                                <EyeOff v-else class="h-4 w-4 text-gray-600" />
                             </button>
                         </div>
                         <p class="text-2xl font-bold text-gray-800">
-                            {{ hideBalances ? '••••••••••••' : `AED ${totalBalance.toLocaleString('en-US', {
-                            minimumFractionDigits: 2 })}` }}
+                            {{
+                                hideBalances
+                                    ? '••••••••••••'
+                                    : `AED ${totalBalance.toLocaleString('en-US', {
+                                          minimumFractionDigits: 2,
+                                      })}`
+                            }}
                         </p>
                     </div>
 
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <div class="flex items-center gap-2 mb-3">
-                            <div class="p-1 bg-blue-100 rounded-lg">
-                                <WalletIcon class="w-4 h-4 text-blue-600" />
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div class="mb-3 flex items-center gap-2">
+                            <div class="rounded-lg bg-blue-100 p-1">
+                                <WalletIcon class="h-4 w-4 text-blue-600" />
                             </div>
                             <h3 class="text-sm font-medium text-gray-700">Active Accounts</h3>
                         </div>
                         <p class="text-2xl font-bold text-gray-800">{{ activeWallets.length }}</p>
                     </div>
 
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                        <div class="flex items-center gap-2 mb-3">
-                            <div class="p-1 bg-emerald-100 rounded-lg">
-                                <TrendingUp class="w-4 h-4 text-emerald-600" />
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div class="mb-3 flex items-center gap-2">
+                            <div class="rounded-lg bg-emerald-100 p-1">
+                                <TrendingUp class="h-4 w-4 text-emerald-600" />
                             </div>
                             <h3 class="text-sm font-medium text-gray-700">This Month</h3>
                         </div>
@@ -687,45 +688,48 @@ const submitTransferForm = () => {
 
             <!-- Active Wallets -->
             <div v-if="activeWallets.length > 0" class="pl-4">
-                <div class="flex items-center gap-2 mb-4">
+                <div class="mb-4 flex items-center gap-2">
                     <h2 class="text-xl font-semibold text-gray-800">Active Wallets</h2>
-                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                    <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                         {{ activeWallets.length }}
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-5">
-                    <div v-for="wallet in activeWallets" :key="wallet.id"
-                        class="bg-white rounded-2xl shadow-sm border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 overflow-hidden group">
+                <div class="grid grid-cols-1 gap-4 pr-5 md:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="wallet in activeWallets"
+                        :key="wallet.id"
+                        class="group overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm transition-all duration-200 hover:border-blue-300 hover:shadow-md"
+                    >
                         <div class="p-6">
-                            <div class="flex items-center justify-between mb-4">
+                            <div class="mb-4 flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div :class="getAccountTypeColor(wallet.account_type)"
-                                        class="p-2 rounded-xl border">
-                                        <component :is="getAccountIcon(wallet.account_type)" class="w-5 h-5" />
+                                    <div :class="getAccountTypeColor(wallet.account_type)" class="rounded-xl border p-2">
+                                        <component :is="getAccountIcon(wallet.account_type)" class="h-5 w-5" />
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-2">
                                             <h3 class="font-semibold text-gray-900">{{ wallet.account_name }}</h3>
-                                            <span v-if="wallet.is_default"
-                                                class="bg-amber-100 text-amber-800 text-xs font-medium px-2 py-1 rounded-full">
+                                            <span
+                                                v-if="wallet.is_default"
+                                                class="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800"
+                                            >
                                                 Default
                                             </span>
                                         </div>
-                                        <p class="text-xs text-gray-500 font-mono tracking-wider uppercase">{{
-                                            wallet.account_number }}
-                                            - {{ wallet.account_type }}</p>
+                                        <p class="font-mono text-xs tracking-wider text-gray-500 uppercase">
+                                            {{ wallet.account_number }} - {{ wallet.account_type }}
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-xs text-gray-500">Owner</p>
-                                    <p class="text-sm font-medium text-blue-600">{{ wallet.owner_name ||
-                                        props.User?.name || 'Account Owner' }}</p>
+                                    <p class="text-sm font-medium text-blue-600">{{ wallet.owner_name || props.User?.name || 'Account Owner' }}</p>
                                 </div>
                             </div>
 
                             <div class="mb-4">
-                                <p class="text-sm text-gray-500 mb-1">Current Balance</p>
+                                <p class="mb-1 text-sm text-gray-500">Current Balance</p>
                                 <p class="text-2xl font-bold text-gray-900">
                                     {{ formatBalance(wallet.balance, wallet.currency) }}
                                 </p>
@@ -734,63 +738,80 @@ const submitTransferForm = () => {
                             <div class="flex gap-2">
                                 <!-- Digital Wallet: Only Transfer and Top Up -->
                                 <template v-if="wallet.account_type === 'wallet'">
-                                    <Button outlined severity="info"
+                                    <Button
+                                        outlined
+                                        severity="info"
                                         @click="openTransferDialog(wallet)"
-                                        class="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <Send class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-orange-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-orange-600"
+                                    >
+                                        <Send class="h-4 w-4" />
                                         Transfer
                                     </Button>
 
-                                    <Button outlined severity="help"
+                                    <Button
+                                        outlined
+                                        severity="help"
                                         @click="openTopUpDialog(wallet)"
-                                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <ArrowUp class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-blue-600"
+                                    >
+                                        <ArrowUp class="h-4 w-4" />
                                         Top up
                                     </Button>
 
-                                    <Button outlined severity="danger"
+                                    <Button
+                                        outlined
+                                        severity="danger"
                                         @click="deactivateWallet(wallet)"
-                                        class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <Ban class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-red-600"
+                                    >
+                                        <Ban class="h-4 w-4" />
                                         Deactivate
                                     </Button>
                                 </template>
 
                                 <!-- Savings Account: Only Deposit -->
                                 <template v-else>
-                                    <Button outlined severity="success"
+                                    <Button
+                                        outlined
+                                        severity="success"
                                         @click="openDepositDialog(wallet)"
-                                        class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <Plus class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-emerald-600"
+                                    >
+                                        <Plus class="h-4 w-4" />
                                         Deposit
                                     </Button>
-                                    
-                                    <Button outlined severity="warn"
+
+                                    <Button
+                                        outlined
+                                        severity="warn"
                                         @click="openWithdrawDialog(wallet)"
-                                        class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <MinusCircle class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-yellow-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-yellow-600"
+                                    >
+                                        <MinusCircle class="h-4 w-4" />
                                         Withdraw
                                     </Button>
 
-                                    <Button outlined severity="danger"
+                                    <Button
+                                        outlined
+                                        severity="danger"
                                         @click="deactivateWallet(wallet)"
-                                        class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 shadow-sm">
-                                        <Ban class="w-4 h-4" />
+                                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-red-600"
+                                    >
+                                        <Ban class="h-4 w-4" />
                                         Deactivate
                                     </Button>
                                 </template>
                             </div>
                         </div>
 
-                        <div class="bg-gray-50 px-6 py-3 border-t">
+                        <div class="border-t bg-gray-50 px-6 py-3">
                             <div class="flex items-center justify-between text-sm">
                                 <div>
                                     <span class="text-gray-500">{{ wallet.bank_name || 'Unknown Bank' }}</span>
                                 </div>
                                 <div>
                                     <span class="text-gray-500">CREATED</span>
-                                    <span class="text-gray-700 ml-1">{{ new Date(wallet.created_at).toLocaleDateString()
-                                        }}</span>
+                                    <span class="ml-1 text-gray-700">{{ new Date(wallet.created_at).toLocaleDateString() }}</span>
                                 </div>
                             </div>
                         </div>
@@ -800,20 +821,23 @@ const submitTransferForm = () => {
 
             <!-- Inactive Wallets -->
             <div v-if="inactiveWallets.length > 0" class="mt-8 pl-4">
-                <div class="flex items-center gap-2 mb-4">
+                <div class="mb-4 flex items-center gap-2">
                     <h2 class="text-xl font-semibold text-gray-800">Inactive Wallets</h2>
-                    <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                    <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         {{ inactiveWallets.length }}
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div v-for="wallet in inactiveWallets" :key="wallet.id"
-                        class="bg-white rounded-2xl shadow-sm border border-gray-300 opacity-60 overflow-hidden">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="wallet in inactiveWallets"
+                        :key="wallet.id"
+                        class="overflow-hidden rounded-2xl border border-gray-300 bg-white opacity-60 shadow-sm"
+                    >
                         <div class="p-6">
-                            <div class="flex items-center gap-3 mb-4">
-                                <div class="bg-gray-100 text-gray-400 p-2 rounded-xl border border-gray-200">
-                                    <component :is="getAccountIcon(wallet.account_type)" class="w-5 h-5" />
+                            <div class="mb-4 flex items-center gap-3">
+                                <div class="rounded-xl border border-gray-200 bg-gray-100 p-2 text-gray-400">
+                                    <component :is="getAccountIcon(wallet.account_type)" class="h-5 w-5" />
                                 </div>
                                 <div>
                                     <h3 class="font-semibold text-gray-600">{{ wallet.account_name }}</h3>
@@ -822,16 +846,17 @@ const submitTransferForm = () => {
                             </div>
 
                             <div class="mb-4">
-                                <p class="text-sm text-gray-400 mb-1">Balance</p>
+                                <p class="mb-1 text-sm text-gray-400">Balance</p>
                                 <p class="text-xl font-bold text-gray-500">
                                     {{ formatBalance(wallet.balance, wallet.currency) }}
                                 </p>
                             </div>
 
-                            <button 
+                            <button
                                 @click="reactivateWallet(wallet)"
-                                class="w-full bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2">
-                                <Plus class="w-4 h-4" />
+                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-green-600"
+                            >
+                                <Plus class="h-4 w-4" />
                                 Reactivate Account
                             </button>
                         </div>
@@ -840,96 +865,116 @@ const submitTransferForm = () => {
             </div>
 
             <!-- Empty State -->
-            <div v-if="!props.wallets || props.wallets.length === 0" class="text-center py-16">
-                <div class="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <WalletIcon class="w-10 h-10 text-gray-400" />
+            <div v-if="!props.wallets || props.wallets.length === 0" class="py-16 text-center">
+                <div class="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+                    <WalletIcon class="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">No wallets yet</h3>
-                <p class="text-gray-500 mb-6 max-w-md mx-auto">
-                    Create your first wallet to start managing your finances and make transactions.
-                </p>
-                <button @click="openCreateDialog"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2 mx-auto">
-                    <Plus class="w-5 h-5" />
+                <h3 class="mb-2 text-xl font-semibold text-gray-900">No wallets yet</h3>
+                <p class="mx-auto mb-6 max-w-md text-gray-500">Create your first wallet to start managing your finances and make transactions.</p>
+                <button
+                    @click="openCreateDialog"
+                    class="mx-auto flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white transition-colors duration-200 hover:bg-blue-700"
+                >
+                    <Plus class="h-5 w-5" />
                     Create Your First Wallet
                 </button>
             </div>
         </div>
 
         <!-- Wallet Creation Dialog -->
-        <Dialog v-model:visible="showCreateDialog" modal header="Create New Wallet" :style="{ width: '38rem' }"
-            class="p-fluid">
+        <Dialog v-model:visible="showCreateDialog" modal header="Create New Wallet" :style="{ width: '38rem' }" class="p-fluid">
             <Divider />
             <form @submit.prevent="submitForm" class="space-y-6">
                 <!-- Account Name -->
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <User class="w-4 h-4" />
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <User class="h-4 w-4" />
                         Account Name
                     </label>
-                    <InputText v-model="form.account_name" placeholder="e.g., Main Wallet, Emergency Fund"
-                        :class="{ 'p-invalid': form.errors.account_name }" class="w-full" />
+                    <InputText
+                        v-model="form.account_name"
+                        placeholder="e.g., Main Wallet, Emergency Fund"
+                        :class="{ 'p-invalid': form.errors.account_name }"
+                        class="w-full"
+                    />
                     <small v-if="form.errors.account_name" class="text-red-500">{{ form.errors.account_name }}</small>
                 </div>
 
                 <!-- Account Type -->
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <WalletIcon class="w-4 h-4" />
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <WalletIcon class="h-4 w-4" />
                         Account Type
                     </label>
-                    <Dropdown v-model="form.account_type" :options="[
-                        { label: 'Digital Wallet', value: 'wallet' },
-                        { label: 'Savings Account', value: 'savings' }
-                    ]" option-label="label" option-value="value" placeholder="Select account type"
-                        :class="{ 'p-invalid': form.errors.account_type }" class="w-full" />
+                    <Dropdown
+                        v-model="form.account_type"
+                        :options="[
+                            { label: 'Digital Wallet', value: 'wallet' },
+                            { label: 'Savings Account', value: 'savings' },
+                        ]"
+                        option-label="label"
+                        option-value="value"
+                        placeholder="Select account type"
+                        :class="{ 'p-invalid': form.errors.account_type }"
+                        class="w-full"
+                    />
                     <small v-if="form.errors.account_type" class="text-red-500">{{ form.errors.account_type }}</small>
                 </div>
 
                 <!-- Bank Selection -->
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Building2 class="w-4 h-4" />
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Building2 class="h-4 w-4" />
                         Bank
                     </label>
-                    <Dropdown v-model="form.bank_key" :options="props.banks" option-label="bank_name" option-value="key"
-                        placeholder="Select a bank" :class="{ 'p-invalid': form.errors.bank_key }" class="w-full" />
+                    <Dropdown
+                        v-model="form.bank_key"
+                        :options="props.banks"
+                        option-label="bank_name"
+                        option-value="key"
+                        placeholder="Select a bank"
+                        :class="{ 'p-invalid': form.errors.bank_key }"
+                        class="w-full"
+                    />
                     <small v-if="form.errors.bank_key" class="text-red-500">{{ form.errors.bank_key }}</small>
                 </div>
 
                 <!-- Currency -->
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <DollarSign class="w-4 h-4" />
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <DollarSign class="h-4 w-4" />
                         Currency
                     </label>
-                    <Dropdown v-model="form.currency" :options="availableCurrencies" option-label="label"
-                        option-value="value" placeholder="Select currency"
-                        :class="{ 'p-invalid': form.errors.currency }" :disabled="!form.bank_key" class="w-full" />
+                    <Dropdown
+                        v-model="form.currency"
+                        :options="availableCurrencies"
+                        option-label="label"
+                        option-value="value"
+                        placeholder="Select currency"
+                        :class="{ 'p-invalid': form.errors.currency }"
+                        :disabled="!form.bank_key"
+                        class="w-full"
+                    />
                     <small v-if="form.errors.currency" class="text-red-500">{{ form.errors.currency }}</small>
                 </div>
 
-
                 <!-- Default Account -->
-                <div class="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                <div class="flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
                     <Checkbox v-model="form.is_default" binary />
-                    <label class="text-sm font-medium text-indigo-800">
-                        Set as default account
-                    </label>
+                    <label class="text-sm font-medium text-indigo-800"> Set as default account </label>
                 </div>
             </form>
 
             <Divider />
-            
+
             <template #footer>
-                <div class="flex gap-3 justify-end">
+                <div class="flex justify-end gap-3">
                     <Button @click="closeCreateDialog" severity="secondary" outlined class="px-4 py-2">
-                        <X class="w-4 h-4 mr-2" />
+                        <X class="mr-2 h-4 w-4" />
                         Cancel
                     </Button>
-                    <Button @click="submitForm" :loading="form.processing"
-                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2">
-                        <Save class="w-4 h-4 mr-2" />
+                    <Button @click="submitForm" :loading="form.processing" class="bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
+                        <Save class="mr-2 h-4 w-4" />
                         Create Wallet
                     </Button>
                 </div>
@@ -940,19 +985,22 @@ const submitTransferForm = () => {
         <Dialog v-model:visible="showDepositDialog" modal header="Deposit Money" class="w-[500px]">
             <div class="space-y-6">
                 <!-- Wallet Information -->
-                <div v-if="selectedWalletForDeposit" class="bg-gray-50 p-4 rounded-lg">
+                <div v-if="selectedWalletForDeposit" class="rounded-lg bg-gray-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-green-100 rounded-lg">
-                            <PiggyBank class="w-5 h-5 text-green-600" />
+                        <div class="rounded-lg bg-green-100 p-2">
+                            <PiggyBank class="h-5 w-5 text-green-600" />
                         </div>
                         <div>
                             <h4 class="font-semibold text-gray-800">{{ selectedWalletForDeposit.account_name }}</h4>
                             <p class="text-sm text-gray-600">{{ selectedWalletForDeposit.account_number }}</p>
-                            <p class="text-sm text-green-600 font-medium">
-                                Current Balance: {{ selectedWalletForDeposit.currency }} {{ Number(selectedWalletForDeposit.balance).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }) }}
+                            <p class="text-sm font-medium text-green-600">
+                                Current Balance: {{ selectedWalletForDeposit.currency }}
+                                {{
+                                    Number(selectedWalletForDeposit.balance).toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })
+                                }}
                             </p>
                         </div>
                     </div>
@@ -963,7 +1011,7 @@ const submitTransferForm = () => {
                     <!-- Amount Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <DollarSign class="w-4 h-4" />
+                            <DollarSign class="h-4 w-4" />
                             Deposit Amount ({{ selectedWalletForDeposit?.currency || 'AED' }})
                         </label>
                         <InputText
@@ -983,35 +1031,22 @@ const submitTransferForm = () => {
                     <!-- Description Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Hash class="w-4 h-4" />
+                            <Hash class="h-4 w-4" />
                             Description (Optional)
                         </label>
-                        <InputText
-                            v-model="depositForm.description"
-                            placeholder="Enter deposit description"
-                            maxlength="255"
-                            class="w-full"
-                        />
+                        <InputText v-model="depositForm.description" placeholder="Enter deposit description" maxlength="255" class="w-full" />
                         <small class="text-gray-500">Add a note for this deposit (optional)</small>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            outlined
-                            @click="closeDepositDialog"
-                            class="flex-1"
-                            :disabled="depositForm.processing"
-                        >
-                            Cancel
-                        </Button>
+                        <Button type="button" outlined @click="closeDepositDialog" class="flex-1" :disabled="depositForm.processing"> Cancel </Button>
                         <Button
                             type="submit"
                             :loading="depositForm.processing"
                             :disabled="!depositAmount || parseFloat(depositAmount) <= 0"
                             class="flex-1 bg-green-500 hover:bg-green-600"
-                        > 
+                        >
                             Deposit
                         </Button>
                     </div>
@@ -1023,27 +1058,32 @@ const submitTransferForm = () => {
         <Dialog v-model:visible="showWithdrawDialog" modal header="Withdraw Money" class="w-[500px]">
             <div class="space-y-6">
                 <!-- Wallet Information -->
-                <div v-if="selectedWalletForWithdraw" class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <div v-if="selectedWalletForWithdraw" class="rounded-lg border border-red-200 bg-red-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-red-100 rounded-lg">
-                            <MinusCircle class="w-5 h-5 text-red-600" />
+                        <div class="rounded-lg bg-red-100 p-2">
+                            <MinusCircle class="h-5 w-5 text-red-600" />
                         </div>
                         <div>
                             <h4 class="font-semibold text-gray-800">{{ selectedWalletForWithdraw.account_name }}</h4>
                             <p class="text-sm text-gray-600">{{ selectedWalletForWithdraw.account_number }}</p>
-                            <p class="text-sm text-green-600 font-medium">
-                                Available Balance: {{ selectedWalletForWithdraw.currency }} {{ Number(selectedWalletForWithdraw.balance).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }) }}
+                            <p class="text-sm font-medium text-green-600">
+                                Available Balance: {{ selectedWalletForWithdraw.currency }}
+                                {{
+                                    Number(selectedWalletForWithdraw.balance).toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })
+                                }}
                             </p>
                             <!-- Show maximum withdrawable amount -->
                             <p class="text-xs text-orange-600">
-                                Maximum withdrawal: {{ selectedWalletForWithdraw.currency }} 
-                                {{ Math.max(0, Number(selectedWalletForWithdraw.balance) - 1000).toLocaleString('en-US', { 
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2 
-                                }) }}
+                                Maximum withdrawal: {{ selectedWalletForWithdraw.currency }}
+                                {{
+                                    Math.max(0, Number(selectedWalletForWithdraw.balance) - 1000).toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })
+                                }}
                             </p>
                         </div>
                     </div>
@@ -1054,7 +1094,7 @@ const submitTransferForm = () => {
                     <!-- Amount Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <DollarSign class="w-4 h-4" />
+                            <DollarSign class="h-4 w-4" />
                             Withdrawal Amount ({{ selectedWalletForWithdraw?.currency || 'AED' }})
                         </label>
                         <InputText
@@ -1069,44 +1109,35 @@ const submitTransferForm = () => {
                             inputId="withdraw-amount"
                         />
                         <small v-if="withdrawForm.errors.amount" class="text-red-500">{{ withdrawForm.errors.amount }}</small>
-                        <small v-else class="text-gray-500">
-                            Enter amount to withdraw (Minimum AED 1,000 must remain in account)
-                        </small>
+                        <small v-else class="text-gray-500"> Enter amount to withdraw (Minimum AED 1,000 must remain in account) </small>
                     </div>
 
                     <!-- Description Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Hash class="w-4 h-4" />
+                            <Hash class="h-4 w-4" />
                             Reason for Withdrawal (Optional)
                         </label>
-                        <InputText
-                            v-model="withdrawForm.description"
-                            placeholder="Enter withdrawal reason"
-                            maxlength="255"
-                            class="w-full"
-                        />
+                        <InputText v-model="withdrawForm.description" placeholder="Enter withdrawal reason" maxlength="255" class="w-full" />
                         <small class="text-gray-500">Add a note for this withdrawal (optional)</small>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            outlined
-                            @click="closeWithdrawDialog"
-                            class="flex-1"
-                            :disabled="withdrawForm.processing"
-                        >
+                        <Button type="button" outlined @click="closeWithdrawDialog" class="flex-1" :disabled="withdrawForm.processing">
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             :loading="withdrawForm.processing"
-                            :disabled="!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > Math.max(0, Number(selectedWalletForWithdraw?.balance || 0) - 1000)"
+                            :disabled="
+                                !withdrawAmount ||
+                                parseFloat(withdrawAmount) <= 0 ||
+                                parseFloat(withdrawAmount) > Math.max(0, Number(selectedWalletForWithdraw?.balance || 0) - 1000)
+                            "
                             class="flex-1 bg-red-500 hover:bg-red-600"
                         >
-                            <MinusCircle class="w-4 h-4 mr-2" />
+                            <MinusCircle class="mr-2 h-4 w-4" />
                             Withdraw
                         </Button>
                     </div>
@@ -1121,16 +1152,16 @@ const submitTransferForm = () => {
         <Dialog v-model:visible="showTopUpDialog" modal header="Top Up Digital Wallet" class="w-[600px]">
             <div class="space-y-6">
                 <!-- Target Wallet Information -->
-                <div v-if="selectedWalletForTopUp" class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div v-if="selectedWalletForTopUp" class="rounded-lg border border-blue-200 bg-blue-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-blue-100 rounded-lg">
-                            <WalletIcon class="w-5 h-5 text-blue-600" />
+                        <div class="rounded-lg bg-blue-100 p-2">
+                            <WalletIcon class="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
                             <h4 class="font-semibold text-gray-800">{{ selectedWalletForTopUp.account_name }}</h4>
                             <p class="text-sm text-gray-600">Digital Wallet - {{ selectedWalletForTopUp.account_number }}</p>
-                            <p class="text-sm text-blue-600 font-medium">
-                                Current Balance: {{ selectedWalletForTopUp.currency }} 
+                            <p class="text-sm font-medium text-blue-600">
+                                Current Balance: {{ selectedWalletForTopUp.currency }}
                                 {{ Number(selectedWalletForTopUp.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                             </p>
                         </div>
@@ -1141,7 +1172,7 @@ const submitTransferForm = () => {
                 <div v-if="availableSavingsAccounts.length > 0" class="space-y-4">
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <PiggyBank class="w-4 h-4" />
+                            <PiggyBank class="h-4 w-4" />
                             Select Source Savings Account
                         </label>
                         <Dropdown
@@ -1154,17 +1185,23 @@ const submitTransferForm = () => {
                             :class="{ 'p-invalid': topUpForm.errors.source_account_key }"
                         >
                             <template #option="slotProps">
-                                <div class="flex justify-between items-center w-full">
+                                <div class="flex w-full items-center justify-between">
                                     <div>
                                         <div class="font-medium">{{ slotProps.option.account_name }}</div>
                                         <div class="text-sm text-gray-500">{{ slotProps.option.account_number }}</div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-sm font-medium text-green-600">
-                                            {{ slotProps.option.currency }} {{ Number(slotProps.option.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                            {{ slotProps.option.currency }}
+                                            {{ Number(slotProps.option.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                                         </div>
                                         <div class="text-xs text-gray-500">
-                                            Available: {{ slotProps.option.currency }} {{ Math.max(0, Number(slotProps.option.balance) - 1000).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                            Available: {{ slotProps.option.currency }}
+                                            {{
+                                                Math.max(0, Number(slotProps.option.balance) - 1000).toLocaleString('en-US', {
+                                                    minimumFractionDigits: 2,
+                                                })
+                                            }}
                                         </div>
                                     </div>
                                 </div>
@@ -1174,17 +1211,18 @@ const submitTransferForm = () => {
                     </div>
 
                     <!-- Selected Source Account Details -->
-                    <div v-if="selectedSourceAccount" class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div v-if="selectedSourceAccount" class="rounded-lg border border-green-200 bg-green-50 p-4">
                         <div class="flex items-center gap-3">
-                            <div class="p-2 bg-green-100 rounded-lg">
-                                <PiggyBank class="w-5 h-5 text-green-600" />
+                            <div class="rounded-lg bg-green-100 p-2">
+                                <PiggyBank class="h-5 w-5 text-green-600" />
                             </div>
                             <div>
                                 <h5 class="font-medium text-gray-800">
-                                    {{ availableSavingsAccounts.find(acc => acc.key === selectedSourceAccount)?.account_name }}
+                                    {{ availableSavingsAccounts.find((acc) => acc.key === selectedSourceAccount)?.account_name }}
                                 </h5>
                                 <p class="text-sm text-green-600">
-                                    Maximum transfer: {{ selectedWalletForTopUp?.currency }} {{ maxTopUpAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                                    Maximum transfer: {{ selectedWalletForTopUp?.currency }}
+                                    {{ maxTopUpAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                                 </p>
                             </div>
                         </div>
@@ -1192,10 +1230,10 @@ const submitTransferForm = () => {
                 </div>
 
                 <!-- No Savings Accounts Available -->
-                <div v-else class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <div v-else class="rounded-lg border border-orange-200 bg-orange-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-orange-100 rounded-lg">
-                            <AlertCircle class="w-5 h-5 text-orange-600" />
+                        <div class="rounded-lg bg-orange-100 p-2">
+                            <AlertCircle class="h-5 w-5 text-orange-600" />
                         </div>
                         <div>
                             <h5 class="font-medium text-gray-800">No Savings Accounts Available</h5>
@@ -1211,7 +1249,7 @@ const submitTransferForm = () => {
                     <!-- Amount Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <ArrowUp class="w-4 h-4" />
+                            <ArrowUp class="h-4 w-4" />
                             Top Up Amount ({{ selectedWalletForTopUp?.currency || 'AED' }})
                         </label>
                         <InputText
@@ -1237,37 +1275,33 @@ const submitTransferForm = () => {
                     <!-- Description Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Hash class="w-4 h-4" />
+                            <Hash class="h-4 w-4" />
                             Transfer Description (Optional)
                         </label>
-                        <InputText
-                            v-model="topUpForm.description"
-                            placeholder="Enter reason for top up"
-                            maxlength="255"
-                            class="w-full"
-                        />
+                        <InputText v-model="topUpForm.description" placeholder="Enter reason for top up" maxlength="255" class="w-full" />
                         <small class="text-gray-500">Add a note for this transfer (optional)</small>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            outlined
-                            @click="closeTopUpDialog"
-                            class="flex-1"
-                            :disabled="topUpForm.processing"
-                        >
-                            Cancel
-                        </Button>
+                        <Button type="button" outlined @click="closeTopUpDialog" class="flex-1" :disabled="topUpForm.processing"> Cancel </Button>
                         <Button
                             type="submit"
                             :loading="topUpForm.processing"
-                            :disabled="!selectedSourceAccount || !topUpAmount || parseFloat(topUpAmount) <= 0 || parseFloat(topUpAmount) > maxTopUpAmount"
+                            :disabled="
+                                !selectedSourceAccount || !topUpAmount || parseFloat(topUpAmount) <= 0 || parseFloat(topUpAmount) > maxTopUpAmount
+                            "
                             class="flex-1 bg-blue-500 hover:bg-blue-600"
                         >
-                            <ArrowUp class="w-4 h-4 mr-2" />
-                            Transfer {{ topUpAmount ? selectedWalletForTopUp?.currency + ' ' + parseFloat(topUpAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '' }}
+                            <ArrowUp class="mr-2 h-4 w-4" />
+                            Transfer
+                            {{
+                                topUpAmount
+                                    ? selectedWalletForTopUp?.currency +
+                                      ' ' +
+                                      parseFloat(topUpAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                                    : ''
+                            }}
                         </Button>
                     </div>
                 </form>
@@ -1278,16 +1312,16 @@ const submitTransferForm = () => {
         <Dialog v-model:visible="showTransferDialog" modal header="Transfer Money" class="w-[650px]">
             <div class="space-y-6">
                 <!-- Sender Wallet Information -->
-                <div v-if="selectedWalletForTransfer" class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <div v-if="selectedWalletForTransfer" class="rounded-lg border border-orange-200 bg-orange-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-orange-100 rounded-lg">
-                            <Send class="w-5 h-5 text-orange-600" />
+                        <div class="rounded-lg bg-orange-100 p-2">
+                            <Send class="h-5 w-5 text-orange-600" />
                         </div>
                         <div>
                             <h4 class="font-semibold text-gray-800">From: {{ selectedWalletForTransfer.account_name }}</h4>
                             <p class="text-sm text-gray-600">{{ selectedWalletForTransfer.account_number }}</p>
-                            <p class="text-sm text-orange-600 font-medium">
-                                Available Balance: {{ selectedWalletForTransfer.currency }} 
+                            <p class="text-sm font-medium text-orange-600">
+                                Available Balance: {{ selectedWalletForTransfer.currency }}
                                 {{ Number(selectedWalletForTransfer.balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                             </p>
                         </div>
@@ -1298,7 +1332,7 @@ const submitTransferForm = () => {
                 <div class="space-y-4">
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Search class="w-4 h-4" />
+                            <Search class="h-4 w-4" />
                             Search Receiver Wallet
                         </label>
                         <div class="relative">
@@ -1308,48 +1342,50 @@ const submitTransferForm = () => {
                                 class="w-full pr-10"
                                 :class="{ 'p-invalid': transferForm.errors.receiver_wallet_key }"
                             />
-                            <Search class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search class="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                         </div>
-                        <small v-if="transferForm.errors.receiver_wallet_key" class="text-red-500">{{ transferForm.errors.receiver_wallet_key }}</small>
+                        <small v-if="transferForm.errors.receiver_wallet_key" class="text-red-500">{{
+                            transferForm.errors.receiver_wallet_key
+                        }}</small>
                         <small v-else class="text-gray-500">Search for users by name, email, @username, or account details</small>
                     </div>
 
                     <!-- Search Results with User Grouping -->
-                    <div v-if="walletSearchQuery && searchResults.length > 0" class="space-y-4 max-h-80 overflow-y-auto">
-                        <div class="text-sm font-medium text-gray-700 mb-2">
+                    <div v-if="walletSearchQuery && searchResults.length > 0" class="max-h-80 space-y-4 overflow-y-auto">
+                        <div class="mb-2 text-sm font-medium text-gray-700">
                             Search Results ({{ searchResults.length }} wallet{{ searchResults.length > 1 ? 's' : '' }} found)
                         </div>
-                        
+
                         <!-- Group results by user -->
                         <div v-for="userGroup in groupedSearchResults" :key="userGroup.user_key" class="space-y-2">
                             <!-- User Header -->
-                            <div class="bg-gray-100 px-3 py-2 rounded-lg border-l-4 border-blue-500">
+                            <div class="rounded-lg border-l-4 border-blue-500 bg-gray-100 px-3 py-2">
                                 <div class="flex items-center gap-2">
-                                    <User class="w-4 h-4 text-blue-600" />
+                                    <User class="h-4 w-4 text-blue-600" />
                                     <div>
                                         <div class="font-medium text-gray-800">{{ userGroup.user_name }}</div>
                                         <div class="text-xs text-gray-500">{{ userGroup.user_email }} • @{{ userGroup.user_handle }}</div>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- User's Wallets -->
                             <div class="ml-4 space-y-1">
-                                <div 
-                                    v-for="wallet in userGroup.wallets" 
+                                <div
+                                    v-for="wallet in userGroup.wallets"
                                     :key="wallet.key"
                                     @click="selectReceiverWallet(wallet)"
-                                    class="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white"
+                                    class="cursor-pointer rounded-lg border bg-white p-3 transition-colors hover:bg-gray-50"
                                     :class="{ 'border-orange-500 bg-orange-50 ring-2 ring-orange-200': selectedReceiverWallet === wallet.key }"
                                 >
-                                    <div class="flex justify-between items-center">
+                                    <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
-                                            <div class="p-1.5 bg-purple-100 rounded-lg">
-                                                <WalletIcon class="w-4 h-4 text-purple-600" />
+                                            <div class="rounded-lg bg-purple-100 p-1.5">
+                                                <WalletIcon class="h-4 w-4 text-purple-600" />
                                             </div>
                                             <div>
                                                 <div class="font-medium text-gray-800">{{ wallet.account_name }}</div>
-                                                <div class="text-sm text-gray-600 font-mono">{{ wallet.account_number }}</div>
+                                                <div class="font-mono text-sm text-gray-600">{{ wallet.account_number }}</div>
                                             </div>
                                         </div>
                                         <div class="text-right">
@@ -1365,12 +1401,14 @@ const submitTransferForm = () => {
                     </div>
 
                     <!-- No Results -->
-                    <div v-else-if="walletSearchQuery && !isSearchingWallets && searchResults.length === 0" 
-                         class="p-6 text-center text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
-                        <Search class="w-8 h-8 mx-auto mb-3 text-gray-300" />
-                        <h4 class="font-medium text-gray-800 mb-1">No users or wallets found</h4>
+                    <div
+                        v-else-if="walletSearchQuery && !isSearchingWallets && searchResults.length === 0"
+                        class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center text-gray-500"
+                    >
+                        <Search class="mx-auto mb-3 h-8 w-8 text-gray-300" />
+                        <h4 class="mb-1 font-medium text-gray-800">No users or wallets found</h4>
                         <p class="text-sm">No results for "{{ walletSearchQuery }}"</p>
-                        <div class="mt-3 text-xs text-gray-400 space-y-1">
+                        <div class="mt-3 space-y-1 text-xs text-gray-400">
                             <div>Try searching by:</div>
                             <div>• User name (e.g., "Karen Smith")</div>
                             <div>• Email address (e.g., "karen@email.com")</div>
@@ -1381,24 +1419,24 @@ const submitTransferForm = () => {
 
                     <!-- Loading State -->
                     <div v-if="isSearchingWallets" class="p-4 text-center">
-                        <div class="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                        <div class="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
                         <p class="text-sm text-gray-500">Searching wallets...</p>
                     </div>
                 </div>
 
                 <!-- Selected Receiver Information -->
-                <div v-if="selectedReceiverWallet" class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div v-if="selectedReceiverWallet" class="rounded-lg border border-green-200 bg-green-50 p-4">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-green-100 rounded-lg">
-                            <UserCheck class="w-5 h-5 text-green-600" />
+                        <div class="rounded-lg bg-green-100 p-2">
+                            <UserCheck class="h-5 w-5 text-green-600" />
                         </div>
                         <div>
                             <h5 class="font-medium text-gray-800">
-                                To: {{ searchResults.find(w => w.key === selectedReceiverWallet)?.account_name }}
+                                To: {{ searchResults.find((w) => w.key === selectedReceiverWallet)?.account_name }}
                             </h5>
                             <p class="text-sm text-green-600">
-                                {{ searchResults.find(w => w.key === selectedReceiverWallet)?.account_number }} - 
-                                Owner: {{ searchResults.find(w => w.key === selectedReceiverWallet)?.user_name }}
+                                {{ searchResults.find((w) => w.key === selectedReceiverWallet)?.account_number }} - Owner:
+                                {{ searchResults.find((w) => w.key === selectedReceiverWallet)?.user_name }}
                             </p>
                         </div>
                     </div>
@@ -1409,7 +1447,7 @@ const submitTransferForm = () => {
                     <!-- Amount Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Send class="w-4 h-4" />
+                            <Send class="h-4 w-4" />
                             Transfer Amount ({{ selectedWalletForTransfer?.currency || 'AED' }})
                         </label>
                         <InputText
@@ -1424,29 +1462,39 @@ const submitTransferForm = () => {
                         />
                         <small v-if="transferForm.errors.amount" class="text-red-500">{{ transferForm.errors.amount }}</small>
                         <small v-else class="text-gray-500">
-                            Maximum: {{ selectedWalletForTransfer?.currency }} {{ maxTransferAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                            Maximum: {{ selectedWalletForTransfer?.currency }}
+                            {{ maxTransferAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                         </small>
                     </div>
 
                     <!-- Commission Info -->
-                    <div v-if="transferAmount" class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                        <h5 class="font-medium text-gray-800 mb-2 flex items-center gap-2">
-                            <AlertCircle class="w-4 h-4 text-yellow-600" />
+                    <div v-if="transferAmount" class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                        <h5 class="mb-2 flex items-center gap-2 font-medium text-gray-800">
+                            <AlertCircle class="h-4 w-4 text-yellow-600" />
                             Transfer Breakdown
                         </h5>
                         <div class="space-y-1 text-sm">
                             <div class="flex justify-between">
                                 <span>Transfer Amount:</span>
-                                <span class="font-medium">{{ selectedWalletForTransfer?.currency }} {{ parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                                <span class="font-medium"
+                                    >{{ selectedWalletForTransfer?.currency }}
+                                    {{ parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span
+                                >
                             </div>
                             <div class="flex justify-between">
                                 <span>Commission Fee (1.5%):</span>
-                                <span class="font-medium text-orange-600">{{ selectedWalletForTransfer?.currency }} {{ calculatedCommission.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                                <span class="font-medium text-orange-600"
+                                    >{{ selectedWalletForTransfer?.currency }}
+                                    {{ calculatedCommission.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span
+                                >
                             </div>
-                            <hr class="my-2">
+                            <hr class="my-2" />
                             <div class="flex justify-between font-medium text-red-600">
                                 <span>Total Deducted:</span>
-                                <span>{{ selectedWalletForTransfer?.currency }} {{ totalDebitAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                                <span
+                                    >{{ selectedWalletForTransfer?.currency }}
+                                    {{ totalDebitAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span
+                                >
                             </div>
                         </div>
                     </div>
@@ -1454,43 +1502,42 @@ const submitTransferForm = () => {
                     <!-- Description Field -->
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <MessageSquare class="w-4 h-4" />
+                            <MessageSquare class="h-4 w-4" />
                             Transfer Note (Optional)
                         </label>
-                        <InputText
-                            v-model="transferForm.description"
-                            placeholder="Enter transfer reason or message"
-                            maxlength="255"
-                            class="w-full"
-                        />
+                        <InputText v-model="transferForm.description" placeholder="Enter transfer reason or message" maxlength="255" class="w-full" />
                         <small class="text-gray-500">Add a note for this transfer (optional)</small>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="flex gap-3 pt-4">
-                        <Button
-                            type="button"
-                            outlined
-                            @click="closeTransferDialog"
-                            class="flex-1"
-                            :disabled="transferForm.processing"
-                        >
+                        <Button type="button" outlined @click="closeTransferDialog" class="flex-1" :disabled="transferForm.processing">
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             :loading="transferForm.processing"
-                            :disabled="!transferAmount || parseFloat(transferAmount) <= 0 || totalDebitAmount > Number(selectedWalletForTransfer?.balance || 0)"
+                            :disabled="
+                                !transferAmount ||
+                                parseFloat(transferAmount) <= 0 ||
+                                totalDebitAmount > Number(selectedWalletForTransfer?.balance || 0)
+                            "
                             class="flex-1 bg-orange-500 hover:bg-orange-600"
                         >
-                            <Send class="w-4 h-4 mr-2" />
-                            Send {{ transferAmount ? selectedWalletForTransfer?.currency + ' ' + parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '' }}
+                            <Send class="mr-2 h-4 w-4" />
+                            Send
+                            {{
+                                transferAmount
+                                    ? selectedWalletForTransfer?.currency +
+                                      ' ' +
+                                      parseFloat(transferAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                                    : ''
+                            }}
                         </Button>
                     </div>
                 </form>
             </div>
         </Dialog>
-
     </AppLayout>
 </template>
 

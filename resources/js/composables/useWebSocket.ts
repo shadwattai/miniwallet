@@ -1,20 +1,19 @@
-import { ref, Ref } from 'vue'
-import Pusher, { Channel } from 'pusher-js'
 import { useToast } from 'primevue/usetoast';
- 
+import Pusher, { Channel } from 'pusher-js';
+import { ref, Ref } from 'vue';
 
 interface Notification {
-    id?: number
-    type: string
-    title: string
-    message: string
-    amount?: string
+    id?: number;
+    type: string;
+    title: string;
+    message: string;
+    amount?: string;
 }
 
 interface WebSocketConfig {
-    pusher_key: string
-    cluster: string
-    auth_endpoint: string
+    pusher_key: string;
+    cluster: string;
+    auth_endpoint: string;
 }
 
 export function useWebSocket() {
@@ -41,12 +40,12 @@ export function useWebSocket() {
         try {
             const response = await fetch('/api/websocket/config', {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json',
-                }
-            })
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            });
 
-            const config: WebSocketConfig = await response.json()
+            const config: WebSocketConfig = await response.json();
 
             // Initialize Pusher
             pusher.value = new Pusher(config.pusher_key, {
@@ -54,24 +53,24 @@ export function useWebSocket() {
                 authEndpoint: config.auth_endpoint,
                 auth: {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json',
-                    }
-                }
-            })
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                },
+            });
 
             // Bind connection events
             pusher.value.connection.bind('connected', () => {
-                console.log('💰 Miniwallet: WebSocket connected')
-                isConnected.value = true
-            })
+                console.log('💰 Miniwallet: WebSocket connected');
+                isConnected.value = true;
+            });
 
-            return true
+            return true;
         } catch (error) {
-            console.error('WebSocket initialization failed:', error)
-            return false
+            console.error('WebSocket initialization failed:', error);
+            return false;
         }
-    }
+    };
 
     /**
      * Subscribe to user-specific notifications
@@ -93,7 +92,7 @@ export function useWebSocket() {
                 type: 'success',
                 title: 'Money Received!',
                 message: data.message,
-                amount: data.formatted_amount
+                amount: data.formatted_amount,
             });
 
             // Update wallet balance
@@ -106,7 +105,7 @@ export function useWebSocket() {
                 severity: 'success',
                 summary: 'Money Received!',
                 detail: data.message,
-                life: 5000 // Duration in milliseconds
+                life: 5000, // Duration in milliseconds
             });
         });
 
@@ -117,7 +116,7 @@ export function useWebSocket() {
                 type: 'info',
                 title: 'Money Sent',
                 message: data.message,
-                amount: data.formatted_amount
+                amount: data.formatted_amount,
             });
 
             // Update wallet balance
@@ -130,7 +129,7 @@ export function useWebSocket() {
                 severity: 'info',
                 summary: 'Money Sent',
                 detail: data.message,
-                life: 5000 // Duration in milliseconds
+                life: 5000, // Duration in milliseconds
             });
         });
 
@@ -145,14 +144,14 @@ export function useWebSocket() {
      * @param notification - Notification object
      */
     const addNotification = (notification: Notification): void => {
-        notification.id = Date.now() + Math.random()
-        notifications.value.unshift(notification)
+        notification.id = Date.now() + Math.random();
+        notifications.value.unshift(notification);
 
         // Keep only the last 10 notifications
         if (notifications.value.length > 10) {
-            notifications.value = notifications.value.slice(0, 10)
+            notifications.value = notifications.value.slice(0, 10);
         }
-    }
+    };
 
     /**
      * Show a browser notification
@@ -161,12 +160,12 @@ export function useWebSocket() {
      */
     const showBrowserNotification = (title: string, message: string): void => {
         // if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, {
-                body: message,
-                icon: '/logos/logo.png'
-            })
+        new Notification(title, {
+            body: message,
+            icon: '/logos/logo.png',
+        });
         // }
-    }
+    };
 
     return {
         isConnected,
@@ -175,6 +174,6 @@ export function useWebSocket() {
         wallets,
         initialize,
         subscribeToUserNotifications,
-        addNotification
+        addNotification,
     };
 }
